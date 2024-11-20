@@ -1,4 +1,5 @@
 import { db } from './index';
+import { vendors, reviews } from './schema';
 import { v4 as uuidv4 } from 'uuid';
 
 const seedVendors = [
@@ -6,11 +7,12 @@ const seedVendors = [
     id: uuidv4(),
     name: 'Elegant Events',
     category: 'Wedding Planners',
-    location: 'New York, NY',
+    location: 'Boston, MA',
     description: 'Full-service wedding planning and coordination',
     phone: '(123) 456-7890',
     email: 'info@elegantevents.com',
     website: 'https://elegantevents.com',
+    createdAt: new Date()
   },
   {
     id: uuidv4(),
@@ -21,6 +23,7 @@ const seedVendors = [
     phone: '(234) 567-8901',
     email: 'info@perfectpictures.com',
     website: 'https://perfectpictures.com',
+    createdAt: new Date()
   },
   {
     id: uuidv4(),
@@ -31,6 +34,7 @@ const seedVendors = [
     phone: '(345) 678-9012',
     email: 'info@floralfantasy.com',
     website: 'https://floralfantasy.com',
+    createdAt: new Date()
   },
   {
     id: uuidv4(),
@@ -41,75 +45,46 @@ const seedVendors = [
     phone: '(456) 789-0123',
     email: 'info@divinedjs.com',
     website: 'https://divinedjs.com',
+    createdAt: new Date()
   },
 ];
 
 async function seed() {
-  console.log('Seeding database...');
-  
   try {
-    // Create tables if they don't exist
-    await new Promise((resolve, reject) => {
-      db.run(`
-        CREATE TABLE IF NOT EXISTS vendors (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          category TEXT NOT NULL,
-          location TEXT NOT NULL,
-          description TEXT,
-          phone TEXT,
-          email TEXT,
-          website TEXT,
-          created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-      `, (err) => err ? reject(err) : resolve(undefined));
-    });
+    console.log('Starting database seeding...');
 
-    await new Promise((resolve, reject) => {
-      db.run(`
-        CREATE TABLE IF NOT EXISTS reviews (
-          id TEXT PRIMARY KEY,
-          vendor_id TEXT NOT NULL,
-          rating INTEGER NOT NULL,
-          comment TEXT,
-          user_name TEXT NOT NULL,
-          created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE CASCADE
-        )
-      `, (err) => err ? reject(err) : resolve(undefined));
-    });
+    console.log('Deleting existing data...');
+    await db.delete(reviews).execute();
+    await db.delete(vendors).execute();
+    console.log('Existing data deleted successfully');
 
-    // Clear existing data
-    await new Promise((resolve) => {
-      db.run('DELETE FROM reviews', [], () => resolve(undefined));
-    });
-    await new Promise((resolve) => {
-      db.run('DELETE FROM vendors', [], () => resolve(undefined));
-    });
-
-    // Insert vendors
+    console.log('Inserting vendors...');
     for (const vendor of seedVendors) {
-      await new Promise((resolve, reject) => {
-        db.run(
-          'INSERT INTO vendors (id, name, category, location, description, phone, email, website) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-          [vendor.id, vendor.name, vendor.category, vendor.location, vendor.description, vendor.phone, vendor.email, vendor.website],
-          (err) => err ? reject(err) : resolve(undefined)
-        );
-      });
+      console.log(`Inserting vendor: ${vendor.name}`);
+      await db.insert(vendors).values(vendor).execute();
 
-      // Add a review for each vendor
-      await new Promise((resolve, reject) => {
-        db.run(
-          'INSERT INTO reviews (id, vendor_id, rating, comment, user_name) VALUES (?, ?, ?, ?, ?)',
-          [uuidv4(), vendor.id, 5, 'Excellent service!', 'John Doe'],
-          (err) => err ? reject(err) : resolve(undefined)
-        );
-      });
+      console.log(`Adding review for vendor: ${vendor.name}`);
+      await db.insert(reviews).values({
+        id: uuidv4(),
+        vendorId: vendor.id,
+        rating: 5,
+        comment: 'Excellent service!',
+        userName: 'John Doe',
+        createdAt: new Date()
+      }).execute();
     }
 
+    console.log('Verifying data...');
+    const insertedVendors = await db.select().from(vendors).execute();
+    console.log(`Successfully inserted ${insertedVendors.length} vendors`);
+
+    const insertedReviews = await db.select().from(reviews).execute();
+    console.log(`Successfully inserted ${insertedReviews.length} reviews`);
+
     console.log('Seeding complete!');
+    process.exit(0);
   } catch (error) {
-    console.error('Error seeding database:', error);
+    console.error('Error during seeding:', error);
     process.exit(1);
   }
 }

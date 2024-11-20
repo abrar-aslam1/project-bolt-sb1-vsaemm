@@ -44,9 +44,22 @@ const vendorsResponseSchema = z.object({
   }),
 });
 
+const photoDetailsSchema = z.object({
+  businessId: z.string(),
+  photoId: z.string(),
+  photoUrl: z.string().optional(),
+  photoDetails: z.any().optional(), // Define more specific schema based on actual response
+});
+
 export type Vendor = z.infer<typeof vendorSchema>;
 export type VendorWithDetails = z.infer<typeof vendorResponseSchema>;
 export type VendorsResponse = z.infer<typeof vendorsResponseSchema>;
+export type PhotoDetails = z.infer<typeof photoDetailsSchema>;
+
+// Create a separate client for RapidAPI calls
+const rapidApiClient = apiClient.create({
+  baseURL: 'https://local-business-data.p.rapidapi.com',
+});
 
 export async function getVendors(params: {
   category?: string;
@@ -79,4 +92,23 @@ export async function createImage(vendorId: string, data: {
 }) {
   const response = await apiClient.post(`/vendors/${vendorId}/images`, data);
   return imageSchema.parse(response.data);
+}
+
+export async function getPhotoDetails(params: {
+  businessId: string;
+  photoId: string;
+}): Promise<PhotoDetails> {
+  try {
+    const response = await rapidApiClient.get('/photo-details', {
+      params: {
+        business_id: params.businessId,
+        photo_id: params.photoId
+      }
+    });
+
+    return photoDetailsSchema.parse(response.data);
+  } catch (error) {
+    console.error('Error fetching photo details:', error);
+    throw error;
+  }
 }

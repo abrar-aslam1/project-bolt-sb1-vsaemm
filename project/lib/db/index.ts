@@ -1,11 +1,14 @@
 import { Database } from 'sqlite3';
 import { promisify } from 'util';
+import path from 'path';
 
 class DB {
   private db: Database;
 
   constructor() {
-    this.db = new Database('./local.db');
+    // Use absolute path to ensure database is found regardless of where the code is executed
+    const dbPath = path.resolve(process.cwd(), 'local.db');
+    this.db = new Database(dbPath);
   }
 
   async query(sql: string, params: any[] = []): Promise<any> {

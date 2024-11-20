@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Skip authentication in development
-  if (process.env.NODE_ENV === 'development') {
+  // Always allow local API requests
+  if (request.nextUrl.hostname === 'localhost') {
     return NextResponse.next();
   }
 

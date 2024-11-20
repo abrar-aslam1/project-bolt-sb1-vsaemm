@@ -1,5 +1,4 @@
-import { sql } from 'drizzle-orm';
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
 export const vendors = sqliteTable('vendors', {
   id: text('id').primaryKey(),
@@ -10,20 +9,14 @@ export const vendors = sqliteTable('vendors', {
   phone: text('phone'),
   email: text('email'),
   website: text('website'),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });
 
 export const reviews = sqliteTable('reviews', {
   id: text('id').primaryKey(),
-  vendorId: text('vendor_id')
-    .notNull()
-    .references(() => vendors.id, { onDelete: 'cascade' }),
+  vendorId: text('vendor_id').references(() => vendors.id, { onDelete: 'cascade' }).notNull(),
   rating: integer('rating').notNull(),
   comment: text('comment'),
   userName: text('user_name').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 });

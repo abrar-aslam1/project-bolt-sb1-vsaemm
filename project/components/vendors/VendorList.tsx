@@ -26,7 +26,7 @@ export default function VendorList() {
       try {
         setLoading(true);
         const category = searchParams.get('category');
-        const location = searchParams.get('location');
+        const locations = searchParams.get('locations');
         const search = searchParams.get('search');
         const page = searchParams.get('page') || '1';
 
@@ -34,7 +34,7 @@ export default function VendorList() {
           page,
           limit: '10',
           ...(category && category !== 'All Categories' && { category }),
-          ...(location && { location }),
+          ...(locations && { locations }),
           ...(search && { search }),
         });
 
@@ -71,6 +71,10 @@ export default function VendorList() {
   }
 
   if (vendors.length === 0) {
+    const locations = searchParams.get('locations');
+    const locationList = locations ? locations.split(',').join(', ') : '';
+    const category = searchParams.get('category');
+    
     return (
       <div className="min-h-[400px] flex items-center justify-center">
         <div className="text-center space-y-4 max-w-md mx-auto p-8 rounded-xl bg-card border border-border/50">
@@ -78,7 +82,15 @@ export default function VendorList() {
             No Vendors Found
           </div>
           <p className="text-muted-foreground leading-relaxed">
-            We couldn't find any vendors matching your criteria. Try adjusting your search or explore different categories to discover the perfect match for your wedding day.
+            {locationList && category ? 
+              `We couldn't find any ${category.toLowerCase()} in ${locationList}.` :
+              locationList ? 
+              `We couldn't find any vendors in ${locationList}.` :
+              category ?
+              `We couldn't find any ${category.toLowerCase()}.` :
+              "We couldn't find any vendors matching your criteria."
+            }
+            {" Try adjusting your search or explore different categories to discover the perfect match for your wedding day."}
           </p>
         </div>
       </div>

@@ -1,15 +1,10 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import { MainNav } from '@/components/main-nav';
+import { SiteFooter } from '@/components/site-footer';
 
-export const metadata: Metadata = {
-  title: 'WeddingVendors - Find Perfect Wedding Professionals',
-  description: 'Discover top-rated wedding vendors for your special day. From photographers to planners, find the perfect professionals in your area.',
-  icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
-  },
-  manifest: '/site.webmanifest',
+export const metadata = {
+  title: 'Wedding Vendors - Find Local Wedding Services',
+  description: 'Find and connect with the best wedding vendors in your area.',
 };
 
 export default function RootLayout({
@@ -18,12 +13,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full">
-      <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-      </head>
-      <body className="h-full min-h-screen bg-gradient-to-b from-background-start-rgb to-background-end-rgb">{children}</body>
+    <html lang="en">
+      <body>
+        <div className="min-h-screen flex flex-col">
+          <MainNav />
+          <main className="flex-grow">
+            {children}
+          </main>
+          <SiteFooter />
+        </div>
+      </body>
     </html>
   );
 }
