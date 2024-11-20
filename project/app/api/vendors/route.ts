@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { vendors } from "@/lib/db/schema";
-import { desc, like, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const querySchema = z.object({
@@ -19,32 +17,36 @@ export async function GET(request: Request) {
     
     const offset = (query.page - 1) * query.limit;
     
-    let baseQuery = db.select().from(vendors);
+    let sql = 'SELECT * FROM vendors WHERE 1=1';
+    const params: any[] = [];
     
     if (query.category && query.category !== "All Categories") {
-      baseQuery = baseQuery.where(like(vendors.category, query.category));
+      sql += ' AND category = ?';
+      params.push(query.category);
     }
     
     if (query.location) {
-      baseQuery = baseQuery.where(like(vendors.location, `%${query.location}%`));
+      sql += ' AND location LIKE ?';
+      params.push(`%${query.location}%`);
     }
     
     if (query.search) {
-      baseQuery = baseQuery.where(like(vendors.name, `%${query.search}%`));
+      sql += ' AND name LIKE ?';
+      params.push(`%${query.search}%`);
     }
     
-    const [results, totalCount] = await Promise.all([
-      baseQuery
-        .orderBy(desc(vendors.createdAt))
-        .limit(query.limit)
-        .offset(offset)
-        .all(),
-      db
-        .select({ count: sql<number>`count(*)` })
-        .from(vendors)
-        .get()
-        .then((result) => result?.count ?? 0),
+    sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(query.limit, offset);
+    
+    const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as count')
+                       .split('ORDER BY')[0];
+    
+    const [results, countResult] = await Promise.all([
+      db.query(sql, params),
+      db.get(countSql, params.slice(0, -2))
     ]);
+    
+    const totalCount = countResult?.count || 0;
     
     return NextResponse.json({
       vendors: results,

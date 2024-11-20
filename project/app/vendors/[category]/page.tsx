@@ -1,47 +1,44 @@
 import { notFound } from 'next/navigation';
-import { db } from '@/db';
-import { vendors } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { db } from '@/lib/db';
 import VendorList from '@/components/vendors/VendorList';
 
 const validCategories = [
   'wedding-planners',
   'photographers',
-  'videographers',
   'florists',
+  'djs-bands',
   'caterers',
   'venues',
-  'djs-bands',
-  'cake-designers',
-  'bridal-shops',
-  'makeup-artists',
-  'hair-stylists'
+  'decorators'
 ];
 
-export default async function VendorCategoryPage({
-  params,
+export default async function CategoryPage({
+  params
 }: {
-  params: { category: string };
+  params: { category: string }
 }) {
-  if (!validCategories.includes(params.category)) {
+  const category = params.category;
+  
+  if (!validCategories.includes(category)) {
     notFound();
   }
 
   // Convert URL-friendly category to display format
-  const displayCategory = params.category
+  const displayCategory = category
     .split('-')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
-  const categoryVendors = await db
-    .select()
-    .from(vendors)
-    .where(eq(vendors.category, displayCategory));
-
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">{displayCategory}</h1>
-      <VendorList vendors={categoryVendors} />
+      <h1 className="text-4xl font-bold mb-8">{displayCategory}</h1>
+      <VendorList />
     </div>
   );
+}
+
+export async function generateStaticParams() {
+  return validCategories.map((category) => ({
+    category,
+  }));
 }

@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { vendors, reviews, images } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const vendor = await db.query.vendors.findFirst({
-      where: eq(vendors.id, params.id),
-    });
+    const vendor = await db.get(
+      'SELECT * FROM vendors WHERE id = ?',
+      [params.id]
+    );
 
     if (!vendor) {
       return NextResponse.json(
@@ -19,15 +18,21 @@ export async function GET(
       );
     }
 
-    const [vendorReviews, vendorImages] = await Promise.all([
-      db.select().from(reviews).where(eq(reviews.vendorId, params.id)).all(),
-      db.select().from(images).where(eq(images.vendorId, params.id)).all(),
+    const [reviews, images] = await Promise.all([
+      db.query(
+        'SELECT * FROM reviews WHERE vendor_id = ? ORDER BY created_at DESC',
+        [params.id]
+      ),
+      db.query(
+        'SELECT * FROM images WHERE vendor_id = ? ORDER BY created_at DESC',
+        [params.id]
+      ),
     ]);
 
     return NextResponse.json({
       ...vendor,
-      reviews: vendorReviews,
-      images: vendorImages,
+      reviews,
+      images,
     });
   } catch (error) {
     console.error("Error fetching vendor:", error);

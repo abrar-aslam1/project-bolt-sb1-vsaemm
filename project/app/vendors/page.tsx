@@ -1,17 +1,19 @@
-import { db } from '@/db';
-import { vendors } from '@/db/schema';
+import { Suspense } from 'react';
+import VendorList from '@/components/vendors/VendorList';
 import VendorCategories from '@/components/vendors/VendorCategories';
 
-export default async function VendorsPage() {
-  const allVendors = await db.select().from(vendors);
-  
-  // Get unique categories
-  const categories = [...new Set(allVendors.map(vendor => vendor.category))];
-
+export default function VendorsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Wedding Vendors</h1>
-      <VendorCategories categories={categories} />
+      <h1 className="text-4xl font-bold mb-8">Our Vendors</h1>
+      
+      <div className="mb-8">
+        <VendorCategories />
+      </div>
+
+      <Suspense fallback={<div>Loading vendors...</div>}>
+        <VendorList />
+      </Suspense>
     </div>
   );
 }
