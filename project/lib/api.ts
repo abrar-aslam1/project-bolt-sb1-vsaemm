@@ -1,65 +1,4 @@
-import apiClient from './api-client';
-import { z } from 'zod';
-
-const vendorSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  category: z.string(),
-  description: z.string().nullable(),
-  location: z.string(),
-  phone: z.string().nullable(),
-  email: z.string().nullable(),
-  website: z.string().nullable(),
-  createdAt: z.number(),
-});
-
-const reviewSchema = z.object({
-  id: z.string(),
-  vendorId: z.string(),
-  rating: z.number(),
-  comment: z.string().nullable(),
-  userName: z.string(),
-  createdAt: z.number(),
-});
-
-const imageSchema = z.object({
-  id: z.string(),
-  vendorId: z.string(),
-  url: z.string(),
-  alt: z.string().nullable(),
-  createdAt: z.number(),
-});
-
-const vendorResponseSchema = vendorSchema.extend({
-  reviews: z.array(reviewSchema),
-  images: z.array(imageSchema),
-});
-
-const vendorsResponseSchema = z.object({
-  vendors: z.array(vendorSchema),
-  pagination: z.object({
-    currentPage: z.number(),
-    totalPages: z.number(),
-    totalItems: z.number(),
-  }),
-});
-
-const photoDetailsSchema = z.object({
-  businessId: z.string(),
-  photoId: z.string(),
-  photoUrl: z.string().optional(),
-  photoDetails: z.any().optional(), // Define more specific schema based on actual response
-});
-
-export type Vendor = z.infer<typeof vendorSchema>;
-export type VendorWithDetails = z.infer<typeof vendorResponseSchema>;
-export type VendorsResponse = z.infer<typeof vendorsResponseSchema>;
-export type PhotoDetails = z.infer<typeof photoDetailsSchema>;
-
-// Create a separate client for RapidAPI calls
-const rapidApiClient = apiClient.create({
-  baseURL: 'https://local-business-data.p.rapidapi.com',
-});
+import { supabase } from './supabase';
 
 export async function getVendors(params: {
   category?: string;
@@ -68,47 +7,55 @@ export async function getVendors(params: {
   page?: number;
   limit?: number;
 }) {
-  const response = await apiClient.get('/vendors', { params });
-  return vendorsResponseSchema.parse(response.data);
+  const offset = ((params.page || 1) - 1) * (params.limit || 10);
+  let query = supabase.from('vendors').select('*', { count: 'exact' });
+
+  if (params.category && params.category !== "All Categories") {
+    query = query.eq('category', params.category);
+  }
+
+  if (params.location) {
+    query = query.ilike('location', `%${params.location}%`);
+  }
+
+  if (params.search) {
+    query = query.ilike('name', `%${params.search}%`);
+  }
+
+  const { data: vendors, count, error } = await query
+    .order('created_at', { ascending: false })
+    .range(offset, offset + (params.limit || 10) - 1);
+
+  if (error) throw error;
+
+  return {
+    vendors: vendors || [],
+    pagination: {
+      currentPage: params.page || 1,
+      totalPages: Math.ceil((count || 0) / (params.limit || 10)),
+      totalItems: count || 0,
+    },
+  };
 }
 
 export async function getVendor(id: string) {
-  const response = await apiClient.get(`/vendors/${id}`);
-  return vendorResponseSchema.parse(response.data);
+  const { data: vendor, error } = await supabase
+    .from('vendors')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) throw error;
+  return vendor;
 }
 
-export async function createReview(vendorId: string, data: {
-  rating: number;
-  comment?: string;
-  userName: string;
-}) {
-  const response = await apiClient.post(`/vendors/${vendorId}/reviews`, data);
-  return reviewSchema.parse(response.data);
-}
+export async function getLocations(query: string = '') {
+  const { data: locations, error } = await supabase
+    .from('locations')
+    .select('*')
+    .or(`city.ilike.%${query}%,state_name.ilike.%${query}%`)
+    .limit(10);
 
-export async function createImage(vendorId: string, data: {
-  url: string;
-  alt?: string;
-}) {
-  const response = await apiClient.post(`/vendors/${vendorId}/images`, data);
-  return imageSchema.parse(response.data);
-}
-
-export async function getPhotoDetails(params: {
-  businessId: string;
-  photoId: string;
-}): Promise<PhotoDetails> {
-  try {
-    const response = await rapidApiClient.get('/photo-details', {
-      params: {
-        business_id: params.businessId,
-        photo_id: params.photoId
-      }
-    });
-
-    return photoDetailsSchema.parse(response.data);
-  } catch (error) {
-    console.error('Error fetching photo details:', error);
-    throw error;
-  }
+  if (error) throw error;
+  return locations || [];
 }
