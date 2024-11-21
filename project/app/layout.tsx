@@ -1,10 +1,13 @@
 import './globals.css';
-import { MainNav } from '@/components/main-nav';
-import { SiteFooter } from '@/components/site-footer';
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import MainNav from '@/components/main-nav';
 
-export const metadata = {
-  title: 'Wedding Vendors - Find Local Wedding Services',
-  description: 'Find and connect with the best wedding vendors in your area.',
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata: Metadata = {
+  title: 'WeddingVendors - Find Local Wedding Professionals',
+  description: 'Connect with exceptional wedding professionals to create unforgettable celebrations of love.',
 };
 
 export default function RootLayout({
@@ -14,14 +17,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <div className="min-h-screen flex flex-col">
-          <MainNav />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <SiteFooter />
-        </div>
+      <body className={inter.className}>
+        <MainNav />
+        <main className="pt-16">{children}</main>
+        <footer className="bg-white border-t mt-16">
+          <div className="container mx-auto px-4 py-8">
+            <div className="text-center text-gray-600">
+              <p>© {new Date().getFullYear()} WeddingVendors. All rights reserved.</p>
+            </div>
+          </div>
+        </footer>
       </body>
     </html>
   );

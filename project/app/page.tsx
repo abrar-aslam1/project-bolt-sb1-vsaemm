@@ -1,79 +1,53 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import Link from 'next/link';
+import VendorCategories from '@/components/vendors/VendorCategories';
+import SearchBar from '@/components/search-bar';
 
-async function getUniqueStates() {
-  try {
-    const filePath = path.join(process.cwd(), 'locations.csv');
-    const fileContent = await fs.readFile(filePath, 'utf-8');
-    const rows = fileContent.split('\n').slice(1); // Skip header
-    
-    const statesMap = new Map();
-    
-    rows.forEach(row => {
-      const columns = row.split(',');
-      if (columns.length >= 4) {  // Ensure we have enough columns
-        const stateId = columns[2]?.replace(/"/g, '');
-        const stateName = columns[3]?.replace(/"/g, '');
-        
-        if (stateId && stateName) {
-          statesMap.set(stateId, {
-            state_id: stateId,
-            state_name: stateName
-          });
-        }
-      }
-    });
-
-    return Array.from(statesMap.values())
-      .sort((a, b) => a.state_name.localeCompare(b.state_name));
-  } catch (error) {
-    console.error('Error reading locations:', error);
-    return [];
-  }
-}
-
-export default async function HomePage() {
-  const states = await getUniqueStates();
-
+export default function Home() {
   return (
-    <div className="container mx-auto px-4 py-8">
+    <main className="container mx-auto px-4 py-8">
       <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">Find Wedding Vendors by Location</h1>
-        <p className="text-gray-600">
-          Browse wedding vendors by state and city to find the perfect match for your special day
+        <h1 className="text-4xl md:text-5xl font-bold mb-4">Find Your Perfect Wedding Vendors</h1>
+        <p className="text-xl text-gray-600 mb-8">
+          Discover and connect with the best wedding professionals in your area
         </p>
+        <div className="max-w-2xl mx-auto">
+          <SearchBar placeholder="Search for vendors, categories, or locations..." />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {states.map((state) => (
-          <Link
-            key={state.state_id}
-            href={`/${state.state_name.toLowerCase().replace(/ /g, '-')}`}
-            className="block p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">{state.state_name}</h2>
-                <p className="text-gray-600 text-sm">{state.state_id}</p>
-              </div>
-              <svg 
-                className="w-6 h-6 text-gray-400" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M9 5l7 7-7 7" 
-                />
-              </svg>
+      <section className="mb-16">
+        <h2 className="text-3xl font-bold mb-8 text-center">Browse by Category</h2>
+        <VendorCategories />
+      </section>
+
+      <section className="bg-pink-50 rounded-lg p-6 md:p-8 mb-16">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">Why Choose WeddingVendors?</h2>
+          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Trusted Professionals</h3>
+              <p className="text-gray-600">Connect with experienced and reliable wedding vendors</p>
             </div>
-          </Link>
-        ))}
-      </div>
-    </div>
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Local Expertise</h3>
+              <p className="text-gray-600">Find the best vendors in your area with local knowledge</p>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Easy Planning</h3>
+              <p className="text-gray-600">Streamline your wedding planning process with our tools</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="text-center">
+        <h2 className="text-2xl md:text-3xl font-bold mb-6">Ready to Start Planning?</h2>
+        <p className="text-xl text-gray-600 mb-8">
+          Browse our categories above to find your perfect wedding vendors
+        </p>
+        <button className="bg-pink-500 text-white px-8 py-3 rounded-lg hover:bg-pink-600 transition-colors">
+          Get Started
+        </button>
+      </section>
+    </main>
   );
 }

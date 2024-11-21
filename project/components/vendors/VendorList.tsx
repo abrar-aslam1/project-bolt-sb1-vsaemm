@@ -1,106 +1,115 @@
-"use client";
+import Link from 'next/link';
+import { promises as fs } from 'fs';
+import path from 'path';
 
-import { useEffect, useState } from 'react';
-import VendorCard from './VendorCard';
-import { useSearchParams } from 'next/navigation';
-import type { Vendor } from '@/types';
-
-interface PaginationData {
-  currentPage: number;
-  totalPages: number;
-  totalItems: number;
+interface Location {
+  city: string;
+  state: string;
+  stateSlug: string;
+  citySlug: string;
+  zipCode: string;
+  vendors: {
+    business: string;
+    category: string;
+    url: string;
+  }[];
 }
 
-export default function VendorList() {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [pagination, setPagination] = useState<PaginationData>({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const fetchVendors = async () => {
-      try {
-        setLoading(true);
-        const category = searchParams.get('category');
-        const locations = searchParams.get('locations');
-        const search = searchParams.get('search');
-        const page = searchParams.get('page') || '1';
-
-        const queryParams = new URLSearchParams({
-          page,
-          limit: '10',
-          ...(category && category !== 'All Categories' && { category }),
-          ...(locations && { locations }),
-          ...(search && { search }),
-        });
-
-        const response = await fetch(`/api/vendors?${queryParams}`);
-        const data = await response.json();
-
-        if (response.ok) {
-          setVendors(data.vendors);
-          setPagination(data.pagination);
-        } else {
-          console.error('Error fetching vendors:', data.error);
-        }
-      } catch (error) {
-        console.error('Error fetching vendors:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchVendors();
-  }, [searchParams]);
-
-  if (loading) {
-    return (
-      <div className="min-h-[400px] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="wedding-text-gradient text-3xl font-playfair animate-pulse">
-            Finding Perfect Vendors
-          </div>
-          <p className="text-muted-foreground">Just a moment while we curate the best options for your special day...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (vendors.length === 0) {
-    const locations = searchParams.get('locations');
-    const locationList = locations ? locations.split(',').join(', ') : '';
-    const category = searchParams.get('category');
+async function getLocationsWithVendors(): Promise<Location[]> {
+  try {
+    const filePath = path.join(process.cwd(), 'locations.csv');
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const rows = fileContent.split('\n').slice(1); // Skip header
     
-    return (
-      <div className="min-h-[400px] flex items-center justify-center">
-        <div className="text-center space-y-4 max-w-md mx-auto p-8 rounded-xl bg-card border border-border/50">
-          <div className="wedding-text-gradient text-3xl font-playfair mb-4">
-            No Vendors Found
-          </div>
-          <p className="text-muted-foreground leading-relaxed">
-            {locationList && category ? 
-              `We couldn't find any ${category.toLowerCase()} in ${locationList}.` :
-              locationList ? 
-              `We couldn't find any vendors in ${locationList}.` :
-              category ?
-              `We couldn't find any ${category.toLowerCase()}.` :
-              "We couldn't find any vendors matching your criteria."
-            }
-            {" Try adjusting your search or explore different categories to discover the perfect match for your wedding day."}
-          </p>
-        </div>
-      </div>
-    );
+    const locationMap = new Map<string, Location>();
+    
+    rows.forEach(row => {
+      const columns = row.split(',');
+      if (columns.length >= 8) {
+        const city = columns[0]?.replace(/"/g, '');
+        const state = columns[3]?.replace(/"/g, '');
+        const zipCode = columns[1]?.replace(/"/g, '');
+        const business = columns[4]?.replace(/"/g, '');
+        const category = columns[5]?.replace(/"/g, '');
+        
+        if (city && state && zipCode && business && category) {
+          const key = `${city}-${state}`;
+          const stateSlug = state.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          const citySlug = city.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          const businessSlug = business.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          const categorySlug = category.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          
+          if (!locationMap.has(key)) {
+            locationMap.set(key, {
+              city,
+              state,
+              stateSlug,
+              citySlug,
+              zipCode,
+              vendors: []
+            });
+          }
+          
+          const location = locationMap.get(key)!;
+          location.vendors.push({
+            business,
+            category,
+            url: `/vendors/${categorySlug}/${businessSlug}`
+          });
+        }
+      }
+    });
+
+    return Array.from(locationMap.values())
+      .sort((a, b) => {
+        // Sort by state first, then by city
+        const stateCompare = a.state.localeCompare(b.state);
+        if (stateCompare !== 0) return stateCompare;
+        return a.city.localeCompare(b.city);
+      });
+  } catch (error) {
+    console.error('Error reading locations:', error);
+    return [];
   }
+}
+
+export default async function VendorList() {
+  const locations = await getLocationsWithVendors();
+  const stateGroups = locations.reduce((groups, location) => {
+    if (!groups[location.state]) {
+      groups[location.state] = [];
+    }
+    groups[location.state].push(location);
+    return groups;
+  }, {} as Record<string, Location[]>);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
-      {vendors.map((vendor) => (
-        <VendorCard key={vendor.id} vendor={vendor} />
+    <div className="space-y-8">
+      {Object.entries(stateGroups).map(([state, locations]) => (
+        <div key={state} className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-2xl font-bold mb-4">{state}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {locations.map((location) => (
+              <div
+                key={`${location.city}-${location.zipCode}`}
+                className="block p-4 bg-gray-50 rounded-lg"
+              >
+                <h3 className="text-lg font-semibold mb-2">{location.city}</h3>
+                <div className="space-y-1">
+                  {location.vendors.map((vendor, index) => (
+                    <Link
+                      key={`${vendor.business}-${index}`}
+                      href={vendor.url}
+                      className="block text-blue-600 hover:text-blue-800"
+                    >
+                      {vendor.business} ({vendor.category})
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );
