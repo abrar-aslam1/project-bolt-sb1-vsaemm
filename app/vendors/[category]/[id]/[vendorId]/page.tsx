@@ -23,6 +23,12 @@ interface VendorDetails {
     author: string;
     date: string;
   }>;
+  attributes?: {
+    available_attributes?: Record<string, string[]>;
+    unavailable_attributes?: Record<string, string[]>;
+  };
+  price_level?: string;
+  is_claimed?: boolean;
 }
 
 const categoryMap: Record<string, string> = {
@@ -88,7 +94,8 @@ async function getVendorDetails(category: string, citySlug: string, vendorId: st
   try {
     const data = await searchBusinesses({
       keyword: categoryMap[category],
-      locationName: city
+      locationName: city,
+      minRating: 4
     });
 
     if (!data || !data.data) {
@@ -114,7 +121,10 @@ async function getVendorDetails(category: string, citySlug: string, vendorId: st
       business_id: vendor.business_id,
       description: vendor.description,
       hours: vendor.hours,
-      reviews: vendor.reviews
+      reviews: vendor.reviews,
+      attributes: vendor.attributes,
+      price_level: vendor.price_level,
+      is_claimed: vendor.is_claimed
     };
   } catch (error) {
     console.error('Error fetching vendor details:', error);
@@ -170,6 +180,11 @@ export default async function VendorDetailsPage({
                   <span className="text-xl">{vendor.rating.toFixed(1)}</span>
                 </div>
               )}
+              {vendor.price_level && (
+                <div className="text-gray-600 mb-4">
+                  Price Level: {vendor.price_level}
+                </div>
+              )}
             </div>
             <div className="text-right">
               {vendor.website && (
@@ -217,6 +232,26 @@ export default async function VendorDetailsPage({
                 </div>
               )}
             </div>
+
+            {vendor.attributes?.available_attributes && Object.keys(vendor.attributes.available_attributes).length > 0 && (
+              <div className="mt-8">
+                <h3 className="text-xl font-semibold mb-3">Features & Amenities</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.entries(vendor.attributes.available_attributes).map(([category, items]) => (
+                    <div key={category} className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-medium mb-2 capitalize">{category.replace(/_/g, ' ')}</h4>
+                      <ul className="space-y-1">
+                        {items.map((item, index) => (
+                          <li key={index} className="text-gray-600 text-sm">
+                            • {item.replace(/_/g, ' ')}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {vendor.reviews && vendor.reviews.length > 0 && (

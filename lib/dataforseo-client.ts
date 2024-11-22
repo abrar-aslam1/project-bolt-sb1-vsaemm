@@ -26,18 +26,18 @@ interface VendorResult {
   business_id: string;
   description?: string;
   hours?: Record<string, string>;
-  reviews?: Array<{
-    rating: number;
-    text: string;
-    author: string;
-    date: string;
-  }>;
   attributes?: {
     available_attributes?: Record<string, string[]>;
     unavailable_attributes?: Record<string, string[]>;
   };
   price_level?: string;
   is_claimed?: boolean;
+  reviews?: Array<{
+    rating: number;
+    text: string;
+    author: string;
+    date: string;
+  }>;
 }
 
 interface SearchResponse {
@@ -58,17 +58,18 @@ export const searchBusinesses = unstable_cache(
     locationCode = 2840, 
     languageCode = 'en',
     limit = 20,
-    minRating = 0 
+    minRating = 4 
   }: SearchParams): Promise<SearchResponse> => {
     try {
-      // Get coordinates for the location (this is a simplified example)
-      // In production, you'd want to use a geocoding service
-      const defaultCoords = {
-        manchester: "53.476225,-2.243572",
-        london: "51.5074,-0.1278"
-      };
+      // Enhance the search keyword with location context
+      const searchKeyword = locationName 
+        ? `${keyword} ${locationName}`
+        : keyword;
 
-      const locationCoord = defaultCoords.manchester; // Default to Manchester
+      // Add wedding-specific terms if not already present
+      const weddingKeyword = searchKeyword.toLowerCase().includes('wedding') 
+        ? searchKeyword 
+        : `wedding ${searchKeyword}`;
 
       const response = await axios({
         method: 'post',
@@ -78,14 +79,27 @@ export const searchBusinesses = unstable_cache(
           password: DATAFORSEO_PASSWORD
         },
         data: [{
-          categories: [keyword.toLowerCase().replace(/[^a-z0-9]/g, '_')],
-          description: keyword,
-          title: keyword,
-          is_claimed: true,
-          location_coordinate: locationCoord + ",10", // 10km radius
-          filters: minRating > 0 ? [["rating.value", ">", minRating]] : undefined,
+          // Use specific categories for better targeting
+          categories: [
+            keyword.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+            'wedding_service',
+            'event_venue'
+          ],
+          description: weddingKeyword,
+          title: weddingKeyword,
+          is_claimed: true, // Only verified businesses
+          location_name: locationName,
+          filters: [
+            ["rating.value", ">", minRating],
+            ["rating.votes_count", ">", 5] // Ensure sufficient reviews
+          ],
           limit: limit,
-          order_by: ["rating.value,desc"]
+          order_by: ["rating.value,desc"],
+          // Additional search parameters for better results
+          search_parameters: {
+            include_keywords: ["wedding", "bridal", "bride", "ceremony"],
+            exclude_keywords: ["funeral", "corporate"]
+          }
         }],
         headers: {
           'content-type': 'application/json'
@@ -95,7 +109,7 @@ export const searchBusinesses = unstable_cache(
       const result = response.data?.tasks?.[0]?.result?.[0];
       
       if (!result || !result.items) {
-        console.warn('No results found for:', keyword);
+        console.warn('No results found for:', weddingKeyword);
         return {
           data: [],
           pagination: {
@@ -123,7 +137,12 @@ export const searchBusinesses = unstable_cache(
         attributes: item.attributes,
         price_level: item.price_level,
         is_claimed: item.is_claimed,
-        reviews: [] // Business listings endpoint doesn't include reviews
+        reviews: item.reviews?.map((review: any) => ({
+          rating: review.rating,
+          text: review.text,
+          author: review.author,
+          date: review.date
+        }))
       }));
 
       const totalResults = result.total_count || vendors.length;
