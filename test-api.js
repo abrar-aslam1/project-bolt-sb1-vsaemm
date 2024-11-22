@@ -1,33 +1,33 @@
 const axios = require('axios');
 
-// Test search with US parameters using Google Maps
-const post_array = [{
-    "keyword": "wedding venues",
-    "language_code": "en",
-    "location_code": 1023191,  // New York, NY, United States
-    "coordinates": "40.7128,-74.0060",
-    "radius": 50000, // 50km radius
-    "limit": 100,
-    "filters": [
-        ["rating", ">", 4],
-        ["reviews_count", ">", 10]
-    ],
-    "sort_by": "rating.desc"
+// Test search with specific category and location
+const requestData = [{
+    keyword: "wedding venues in New York",
+    language_code: "en",
+    location_code: 1023191,  // Location code for New York, NY
+    limit: 20,
+    filters: [
+        ["rating.value", ">", 4]
+    ]
 }];
 
-console.log('Testing search with parameters:', JSON.stringify(post_array, null, 2));
+console.log('Testing search with parameters:', JSON.stringify(requestData, null, 2));
 
-axios({
+const instance = axios.create({
+    timeout: 30000, // 30 second timeout
+    headers: {
+        'content-type': 'application/json'
+    }
+});
+
+instance({
     method: 'post',
     url: 'https://api.dataforseo.com/v3/serp/google/maps/live/advanced',
     auth: {
         username: 'abrar@amarosystems.com',
         password: '69084d8c8dcf81cd'
     },
-    data: post_array,
-    headers: {
-        'content-type': 'application/json'
-    }
+    data: requestData
 }).then(function (response) {
     console.log('\nAPI Response Status:', response.data.status_code, response.data.status_message);
     
@@ -38,47 +38,33 @@ axios({
         console.log('Items returned:', result.items?.length);
         
         if (result.items && result.items.length > 0) {
-            // Debug first item structure
-            console.log('\nFirst item structure:', JSON.stringify(result.items[0], null, 2));
-
-            console.log('\nFirst 10 Results:');
-            result.items.slice(0, 10).forEach((item, index) => {
-                const rating = typeof item.rating === 'object' ? item.rating.value : item.rating;
-                const reviews = typeof item.rating === 'object' ? item.rating.votes_count : item.reviews_count;
-                
+            console.log('\nRaw first item:', JSON.stringify(result.items[0], null, 2));
+            
+            console.log('\nFirst 5 Results:');
+            result.items.slice(0, 5).forEach((item, index) => {
                 console.log(`\n${index + 1}. ${item.title}`);
-                if (item.address_info) {
-                    console.log(`Location: ${item.address_info.city}, ${item.address_info.state}, ${item.address_info.country}`);
-                }
-                if (item.address) {
-                    console.log(`Address: ${item.address}`);
-                }
-                if (rating) {
-                    console.log(`Rating: ${rating} (${reviews || 0} reviews)`);
-                }
-                if (item.place_id) {
-                    console.log(`Place ID: ${item.place_id}`);
-                }
-                if (item.website) {
-                    console.log(`Website: ${item.website}`);
+                console.log(`Address: ${item.address}`);
+                if (item.rating) {
+                    console.log(`Rating: ${item.rating.value} (${item.rating.votes_count} reviews)`);
                 }
                 if (item.phone) {
                     console.log(`Phone: ${item.phone}`);
                 }
-                if (item.hours) {
-                    console.log('Hours:', item.hours);
+                if (item.url) {
+                    console.log(`Website: ${item.url}`);
                 }
-                if (item.description) {
-                    console.log(`Description: ${item.description}`);
+                if (item.main_image) {
+                    console.log(`Image: ${item.main_image}`);
+                }
+                if (item.address_info) {
+                    console.log('Location:', JSON.stringify(item.address_info, null, 2));
                 }
             });
 
             // Log distribution of ratings
             const ratingDistribution = result.items.reduce((acc, item) => {
-                const rating = Math.floor(
-                    typeof item.rating === 'object' ? item.rating.value : item.rating
-                );
-                if (!isNaN(rating)) {
+                const rating = Math.floor(item.rating?.value || 0);
+                if (rating > 0) {
                     acc[rating] = (acc[rating] || 0) + 1;
                 }
                 return acc;
@@ -106,6 +92,7 @@ axios({
                 });
         } else {
             console.log('\nNo items in results');
+            console.log('Full result:', JSON.stringify(result, null, 2));
         }
     } else {
         console.log('\nNo results found');
