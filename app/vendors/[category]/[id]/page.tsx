@@ -25,6 +25,7 @@ interface SearchResult {
 }
 
 const ITEMS_PER_PAGE = 25;
+const ITEMS_PER_ROW = 3; // Number of items in one row based on grid layout
 
 const categoryMap: Record<string, string> = {
   'wedding-venues': 'wedding venue',
@@ -199,48 +200,57 @@ export default async function VendorLocationPage({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {vendors.map((vendor, index) => (
-          <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
-            <VendorImage src={vendor.photo} alt={vendor.name} />
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-2">{vendor.name}</h2>
-              <div className="space-y-2 text-gray-600">
-                {vendor.rating && (
-                  <p className="flex items-center">
-                    <span className="text-yellow-400 mr-1">★</span>
-                    {vendor.rating.toFixed(1)}
-                  </p>
-                )}
-                <p>{vendor.category}</p>
-                <p>{vendor.address}</p>
-                {vendor.phone && (
-                  <p>
-                    <a href={`tel:${vendor.phone}`} className="text-blue-600 hover:text-blue-800">
-                      {vendor.phone}
-                    </a>
-                  </p>
-                )}
-                {vendor.website && (
-                  <p>
-                    <a 
-                      href={vendor.website} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      Visit Website
-                    </a>
-                  </p>
-                )}
-                <div className="mt-4 pt-4 border-t">
-                  <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors w-full">
-                    Contact Vendor
-                  </button>
+        {vendors.map((vendor, index) => {
+          // Prioritize first row of images on first page
+          const shouldPrioritize = currentPage === 1 && index < ITEMS_PER_ROW;
+          
+          return (
+            <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <VendorImage 
+                src={vendor.photo} 
+                alt={vendor.name} 
+                isPriority={shouldPrioritize}
+              />
+              <div className="p-6">
+                <h2 className="text-xl font-semibold mb-2">{vendor.name}</h2>
+                <div className="space-y-2 text-gray-600">
+                  {vendor.rating && (
+                    <p className="flex items-center">
+                      <span className="text-yellow-400 mr-1">★</span>
+                      {vendor.rating.toFixed(1)}
+                    </p>
+                  )}
+                  <p>{vendor.category}</p>
+                  <p>{vendor.address}</p>
+                  {vendor.phone && (
+                    <p>
+                      <a href={`tel:${vendor.phone}`} className="text-blue-600 hover:text-blue-800">
+                        {vendor.phone}
+                      </a>
+                    </p>
+                  )}
+                  {vendor.website && (
+                    <p>
+                      <a 
+                        href={vendor.website} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        Visit Website
+                      </a>
+                    </p>
+                  )}
+                  <div className="mt-4 pt-4 border-t">
+                    <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors w-full">
+                      Contact Vendor
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {pagination.totalPages > 1 && (
