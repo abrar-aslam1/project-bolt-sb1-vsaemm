@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { unstable_cache } from 'next/cache';
+import path from 'path';
+import { promises as fs } from 'fs';
 
 const DATAFORSEO_USERNAME = 'abrar@amarosystems.com';
 const DATAFORSEO_PASSWORD = '69084d8c8dcf81cd';
@@ -96,6 +98,61 @@ interface MapSearchItem {
   is_claimed?: boolean;
 }
 
+interface LocationInfo {
+  city: string;
+  state: string;
+  lat: string;
+  lng: string;
+}
+
+// Cache location data for better performance
+const getLocationInfo = async (locationName: string): Promise<LocationInfo | null> => {
+  try {
+    const filePath = path.join(process.cwd(), 'locations.csv');
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    const rows = fileContent.split('\n').slice(1); // Skip header
+
+    // Try to find exact state match first
+    const stateRow = rows.find(row => {
+      const columns = row.split(',');
+      const stateName = columns[3]?.replace(/"/g, '');
+      return stateName.toLowerCase() === locationName.toLowerCase();
+    });
+
+    if (stateRow) {
+      const columns = stateRow.split(',');
+      return {
+        city: columns[0].replace(/"/g, ''),
+        state: columns[3].replace(/"/g, ''),
+        lat: columns[6].replace(/"/g, ''),
+        lng: columns[7].replace(/"/g, '')
+      };
+    }
+
+    // If no state match, try city match
+    const cityRow = rows.find(row => {
+      const columns = row.split(',');
+      const city = columns[0]?.replace(/"/g, '');
+      return city.toLowerCase() === locationName.toLowerCase();
+    });
+
+    if (cityRow) {
+      const columns = cityRow.split(',');
+      return {
+        city: columns[0].replace(/"/g, ''),
+        state: columns[3].replace(/"/g, ''),
+        lat: columns[6].replace(/"/g, ''),
+        lng: columns[7].replace(/"/g, '')
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error reading locations:', error);
+    return null;
+  }
+};
+
 // Cache search results for 24 hours
 export const searchBusinesses = unstable_cache(
   async ({ 
@@ -107,8 +164,11 @@ export const searchBusinesses = unstable_cache(
     minRating = 4 
   }: SearchParams): Promise<SearchResponse> => {
     try {
-      // Get coordinates for New York as default
-      const coordinates = "40.7128,-74.0060";
+      // Get location coordinates
+      const locationInfo = await getLocationInfo(locationName.split(',')[0]);
+      const coordinates = locationInfo 
+        ? `${locationInfo.lat},${locationInfo.lng}`
+        : "40.7128,-74.0060"; // Default to New York
       
       const response = await axios({
         method: 'post',
@@ -118,11 +178,10 @@ export const searchBusinesses = unstable_cache(
           password: DATAFORSEO_PASSWORD
         },
         data: [{
-          keyword: `${keyword}`,
+          keyword: `${keyword} in ${locationName}`,
           language_code: languageCode,
-          location_code: locationCode,
           coordinates: coordinates,
-          radius: 50000, // 50km radius
+          radius: 100000, // 100km radius for better coverage
           limit: limit,
           filters: [
             ["rating", ">", minRating],
@@ -138,7 +197,7 @@ export const searchBusinesses = unstable_cache(
       const result = response.data?.tasks?.[0]?.result?.[0];
       
       if (!result || !result.items) {
-        console.warn('No results found for:', keyword);
+        console.warn('No results found for:', keyword, 'in', locationName);
         return {
           data: [],
           pagination: {
@@ -159,7 +218,7 @@ export const searchBusinesses = unstable_cache(
         rating: item.rating,
         latitude: item.latitude,
         longitude: item.longitude,
-        photos: [item.main_image].filter(Boolean),
+        photos: [item.main_image].filter(Boolean) as string[],
         business_id: item.place_id || String(item.cid),
         description: item.snippet,
         hours: item.work_hours,
