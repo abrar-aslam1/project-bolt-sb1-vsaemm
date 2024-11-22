@@ -108,9 +108,10 @@ export default async function CategoryPage({ params }: { params: { category: str
               <h2 className="text-xl md:text-2xl font-bold mb-4">{state}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {locations.map((location, index) => (
-                  <div
+                  <Link
                     key={`${location.city}-${index}`}
-                    className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    href={`/vendors/${params.category}/${encodeURIComponent(location.city.toLowerCase())}`}
+                    className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                   >
                     <div>
                       <h3 className="text-lg font-semibold mb-1">{location.city}</h3>
@@ -118,7 +119,7 @@ export default async function CategoryPage({ params }: { params: { category: str
                         {location.zipCode}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
