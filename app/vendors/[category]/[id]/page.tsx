@@ -10,40 +10,36 @@ interface VendorDetails {
   address: string;
   phone_number?: string;
   website?: string;
-  rating?: number;
+  rating?: {
+    value: number;
+    votes_count: number;
+  };
   latitude: number;
   longitude: number;
   photos?: string[];
   business_id: string;
   description?: string;
-  hours?: Record<string, string>;
+  hours?: {
+    timetable: Record<string, Array<{
+      open: { hour: number; minute: number };
+      close: { hour: number; minute: number };
+    }>>;
+    current_status: string;
+  };
   attributes?: {
     available_attributes?: Record<string, string[]>;
     unavailable_attributes?: Record<string, string[]>;
   };
   price_level?: string;
   is_claimed?: boolean;
-}
-
-interface BusinessData {
-  name: string;
-  category?: string;
-  address: string;
-  phone_number?: string;
-  website?: string;
-  rating?: number;
-  latitude: number;
-  longitude: number;
-  photos?: string[];
-  business_id: string;
-  description?: string;
-  hours?: Record<string, string>;
-  attributes?: {
-    available_attributes?: Record<string, string[]>;
-    unavailable_attributes?: Record<string, string[]>;
+  address_info?: {
+    borough?: string;
+    address: string;
+    city: string;
+    zip: string;
+    region: string;
+    country_code: string;
   };
-  price_level?: string;
-  is_claimed?: boolean;
 }
 
 interface SearchResult {
@@ -56,7 +52,6 @@ interface SearchResult {
 }
 
 const ITEMS_PER_PAGE = 20;
-const MIN_RATING = 4; // Only show vendors with 4+ rating
 
 const categoryMap: Record<string, string> = {
   'wedding-venues': 'wedding venue',
@@ -139,7 +134,7 @@ async function getVendorsByCity(category: string, citySlug: string, page: number
       keyword: categoryMap[category],
       locationName: city,
       limit: ITEMS_PER_PAGE,
-      minRating: MIN_RATING
+      minRating: 4
     });
 
     if (!data || !data.data) {
@@ -154,33 +149,9 @@ async function getVendorsByCity(category: string, citySlug: string, page: number
       };
     }
 
-    const vendors = data.data.map((business: BusinessData) => ({
-      name: business.name,
-      category: business.category || categoryMap[category],
-      address: business.address,
-      phone_number: business.phone_number,
-      website: business.website,
-      rating: business.rating,
-      latitude: business.latitude,
-      longitude: business.longitude,
-      photos: business.photos,
-      business_id: business.business_id,
-      description: business.description,
-      hours: business.hours,
-      attributes: business.attributes,
-      price_level: business.price_level,
-      is_claimed: business.is_claimed
-    }));
-
-    console.log(`Found ${vendors.length} vendors for ${city}`);
-
     return {
-      vendors,
-      pagination: {
-        currentPage: data.pagination.currentPage,
-        totalPages: data.pagination.totalPages,
-        totalResults: data.pagination.totalResults
-      }
+      vendors: data.data,
+      pagination: data.pagination
     };
   } catch (error) {
     console.error('Error fetching vendors:', error);
@@ -303,7 +274,8 @@ export default async function VendorLocationPage({
                 {vendor.rating && (
                   <p className="flex items-center">
                     <span className="text-yellow-400 mr-1">★</span>
-                    {vendor.rating.toFixed(1)}
+                    <span>{vendor.rating.value.toFixed(1)}</span>
+                    <span className="text-gray-500 ml-2">({vendor.rating.votes_count} reviews)</span>
                   </p>
                 )}
                 <p>{vendor.category}</p>

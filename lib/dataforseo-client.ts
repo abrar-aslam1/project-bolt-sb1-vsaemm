@@ -13,25 +13,52 @@ interface SearchParams {
   minRating?: number;
 }
 
+interface WorkHours {
+  open: { hour: number; minute: number };
+  close: { hour: number; minute: number };
+}
+
+interface BusinessHours {
+  timetable: Record<string, WorkHours[]>;
+  current_status: string;
+}
+
+interface Rating {
+  value: number;
+  votes_count: number;
+}
+
+interface AddressInfo {
+  borough?: string;
+  address: string;
+  city: string;
+  zip: string;
+  region: string;
+  country_code: string;
+}
+
 interface VendorResult {
   name: string;
   category?: string;
   address: string;
   phone_number?: string;
   website?: string;
-  rating?: number;
+  rating?: Rating;
   latitude: number;
   longitude: number;
   photos?: string[];
   business_id: string;
   description?: string;
-  hours?: Record<string, string>;
+  hours?: BusinessHours;
   attributes?: {
     available_attributes?: Record<string, string[]>;
     unavailable_attributes?: Record<string, string[]>;
   };
   price_level?: string;
   is_claimed?: boolean;
+  address_info?: AddressInfo;
+  main_image?: string;
+  additional_categories?: string[];
   reviews?: Array<{
     rating: number;
     text: string;
@@ -50,56 +77,58 @@ interface SearchResponse {
   };
 }
 
+interface MapSearchItem {
+  title: string;
+  category?: string;
+  address: string;
+  phone?: string;
+  url?: string;
+  rating?: Rating;
+  latitude: number;
+  longitude: number;
+  main_image?: string;
+  place_id: string;
+  cid?: string;
+  snippet?: string;
+  work_hours?: BusinessHours;
+  address_info?: AddressInfo;
+  additional_categories?: string[];
+  is_claimed?: boolean;
+}
+
 // Cache search results for 24 hours
 export const searchBusinesses = unstable_cache(
   async ({ 
     keyword, 
-    locationName, 
-    locationCode = 2840, 
+    locationName = "New York, New York, United States",
+    locationCode = 1023191, 
     languageCode = 'en',
-    limit = 20,
+    limit = 100,
     minRating = 4 
   }: SearchParams): Promise<SearchResponse> => {
     try {
-      // Enhance the search keyword with location context
-      const searchKeyword = locationName 
-        ? `${keyword} ${locationName}`
-        : keyword;
-
-      // Add wedding-specific terms if not already present
-      const weddingKeyword = searchKeyword.toLowerCase().includes('wedding') 
-        ? searchKeyword 
-        : `wedding ${searchKeyword}`;
-
+      // Get coordinates for New York as default
+      const coordinates = "40.7128,-74.0060";
+      
       const response = await axios({
         method: 'post',
-        url: 'https://api.dataforseo.com/v3/business_data/business_listings/search/live',
+        url: 'https://api.dataforseo.com/v3/serp/google/maps/live/advanced',
         auth: {
           username: DATAFORSEO_USERNAME,
           password: DATAFORSEO_PASSWORD
         },
         data: [{
-          // Use specific categories for better targeting
-          categories: [
-            keyword.toLowerCase().replace(/[^a-z0-9]/g, '_'),
-            'wedding_service',
-            'event_venue'
-          ],
-          description: weddingKeyword,
-          title: weddingKeyword,
-          is_claimed: true, // Only verified businesses
-          location_name: locationName,
-          filters: [
-            ["rating.value", ">", minRating],
-            ["rating.votes_count", ">", 5] // Ensure sufficient reviews
-          ],
+          keyword: `${keyword}`,
+          language_code: languageCode,
+          location_code: locationCode,
+          coordinates: coordinates,
+          radius: 50000, // 50km radius
           limit: limit,
-          order_by: ["rating.value,desc"],
-          // Additional search parameters for better results
-          search_parameters: {
-            include_keywords: ["wedding", "bridal", "bride", "ceremony"],
-            exclude_keywords: ["funeral", "corporate"]
-          }
+          filters: [
+            ["rating", ">", minRating],
+            ["reviews_count", ">", 10]
+          ],
+          sort_by: "rating.desc"
         }],
         headers: {
           'content-type': 'application/json'
@@ -109,7 +138,7 @@ export const searchBusinesses = unstable_cache(
       const result = response.data?.tasks?.[0]?.result?.[0];
       
       if (!result || !result.items) {
-        console.warn('No results found for:', weddingKeyword);
+        console.warn('No results found for:', keyword);
         return {
           data: [],
           pagination: {
@@ -121,28 +150,23 @@ export const searchBusinesses = unstable_cache(
         };
       }
 
-      const vendors: VendorResult[] = result.items.map((item: any) => ({
+      const vendors: VendorResult[] = (result.items as MapSearchItem[]).map(item => ({
         name: item.title,
         category: item.category,
         address: item.address,
         phone_number: item.phone,
         website: item.url,
-        rating: item.rating?.value,
+        rating: item.rating,
         latitude: item.latitude,
         longitude: item.longitude,
         photos: [item.main_image].filter(Boolean),
         business_id: item.place_id || String(item.cid),
-        description: item.description,
-        hours: item.work_time?.work_hours?.timetable,
-        attributes: item.attributes,
-        price_level: item.price_level,
-        is_claimed: item.is_claimed,
-        reviews: item.reviews?.map((review: any) => ({
-          rating: review.rating,
-          text: review.text,
-          author: review.author,
-          date: review.date
-        }))
+        description: item.snippet,
+        hours: item.work_hours,
+        address_info: item.address_info,
+        main_image: item.main_image,
+        additional_categories: item.additional_categories,
+        is_claimed: item.is_claimed
       }));
 
       const totalResults = result.total_count || vendors.length;

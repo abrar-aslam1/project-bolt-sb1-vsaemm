@@ -10,25 +10,36 @@ interface VendorDetails {
   address: string;
   phone_number?: string;
   website?: string;
-  rating?: number;
+  rating?: {
+    value: number;
+    votes_count: number;
+  };
   latitude: number;
   longitude: number;
   photos?: string[];
   business_id: string;
   description?: string;
-  hours?: Record<string, string>;
-  reviews?: Array<{
-    rating: number;
-    text: string;
-    author: string;
-    date: string;
-  }>;
+  hours?: {
+    timetable: Record<string, Array<{
+      open: { hour: number; minute: number };
+      close: { hour: number; minute: number };
+    }>>;
+    current_status: string;
+  };
   attributes?: {
     available_attributes?: Record<string, string[]>;
     unavailable_attributes?: Record<string, string[]>;
   };
   price_level?: string;
   is_claimed?: boolean;
+  address_info?: {
+    borough?: string;
+    address: string;
+    city: string;
+    zip: string;
+    region: string;
+    country_code: string;
+  };
 }
 
 const categoryMap: Record<string, string> = {
@@ -94,8 +105,7 @@ async function getVendorDetails(category: string, citySlug: string, vendorId: st
   try {
     const data = await searchBusinesses({
       keyword: categoryMap[category],
-      locationName: city,
-      minRating: 4
+      locationName: city
     });
 
     if (!data || !data.data) {
@@ -108,24 +118,7 @@ async function getVendorDetails(category: string, citySlug: string, vendorId: st
       return null;
     }
 
-    return {
-      name: vendor.name,
-      category: vendor.category || categoryMap[category],
-      address: vendor.address,
-      phone_number: vendor.phone_number,
-      website: vendor.website,
-      rating: vendor.rating,
-      latitude: vendor.latitude,
-      longitude: vendor.longitude,
-      photos: vendor.photos,
-      business_id: vendor.business_id,
-      description: vendor.description,
-      hours: vendor.hours,
-      reviews: vendor.reviews,
-      attributes: vendor.attributes,
-      price_level: vendor.price_level,
-      is_claimed: vendor.is_claimed
-    };
+    return vendor;
   } catch (error) {
     console.error('Error fetching vendor details:', error);
     return null;
@@ -177,12 +170,8 @@ export default async function VendorDetailsPage({
               {vendor.rating && (
                 <div className="flex items-center mb-4">
                   <span className="text-yellow-400 text-2xl mr-2">★</span>
-                  <span className="text-xl">{vendor.rating.toFixed(1)}</span>
-                </div>
-              )}
-              {vendor.price_level && (
-                <div className="text-gray-600 mb-4">
-                  Price Level: {vendor.price_level}
+                  <span className="text-xl">{vendor.rating.value.toFixed(1)}</span>
+                  <span className="text-gray-500 ml-2">({vendor.rating.votes_count} reviews)</span>
                 </div>
               )}
             </div>
@@ -216,16 +205,32 @@ export default async function VendorDetailsPage({
               <div>
                 <h3 className="text-xl font-semibold mb-3">Location</h3>
                 <p className="text-gray-600">{vendor.address}</p>
+                {vendor.address_info && (
+                  <p className="text-gray-600 mt-2">
+                    {[
+                      vendor.address_info.city,
+                      vendor.address_info.region,
+                      vendor.address_info.zip
+                    ].filter(Boolean).join(', ')}
+                  </p>
+                )}
               </div>
               
-              {vendor.hours && Object.keys(vendor.hours).length > 0 && (
+              {vendor.hours?.timetable && Object.keys(vendor.hours.timetable).length > 0 && (
                 <div>
                   <h3 className="text-xl font-semibold mb-3">Business Hours</h3>
                   <div className="space-y-2">
-                    {Object.entries(vendor.hours).map(([day, hours]) => (
+                    {Object.entries(vendor.hours.timetable).map(([day, slots]) => (
                       <div key={day} className="flex justify-between">
-                        <span className="font-medium">{day}</span>
-                        <span className="text-gray-600">{hours}</span>
+                        <span className="font-medium capitalize">{day}</span>
+                        <span className="text-gray-600">
+                          {slots.map((slot, index) => (
+                            <span key={index}>
+                              {`${slot.open.hour}:${slot.open.minute.toString().padStart(2, '0')} - `}
+                              {`${slot.close.hour}:${slot.close.minute.toString().padStart(2, '0')}`}
+                            </span>
+                          ))}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -233,9 +238,10 @@ export default async function VendorDetailsPage({
               )}
             </div>
 
-            {vendor.attributes?.available_attributes && Object.keys(vendor.attributes.available_attributes).length > 0 && (
+            {vendor.attributes?.available_attributes && 
+             Object.keys(vendor.attributes.available_attributes).length > 0 && (
               <div className="mt-8">
-                <h3 className="text-xl font-semibold mb-3">Features & Amenities</h3>
+                <h3 className="text-xl font-semibold mb-4">Features & Amenities</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {Object.entries(vendor.attributes.available_attributes).map(([category, items]) => (
                     <div key={category} className="bg-gray-50 p-4 rounded-lg">
@@ -253,28 +259,6 @@ export default async function VendorDetailsPage({
               </div>
             )}
           </div>
-
-          {vendor.reviews && vendor.reviews.length > 0 && (
-            <div className="border-t border-gray-200 mt-8 pt-8">
-              <h2 className="text-2xl font-semibold mb-6">Reviews</h2>
-              <div className="space-y-6">
-                {vendor.reviews.map((review, index) => (
-                  <div key={index} className="border-b border-gray-100 pb-6 last:border-0">
-                    <div className="flex items-center mb-2">
-                      <span className="text-yellow-400 mr-2">★</span>
-                      <span className="font-medium">{review.rating.toFixed(1)}</span>
-                    </div>
-                    <p className="text-gray-600 mb-2">{review.text}</p>
-                    <div className="text-sm text-gray-500">
-                      <span>{review.author}</span>
-                      <span className="mx-2">•</span>
-                      <span>{new Date(review.date).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
