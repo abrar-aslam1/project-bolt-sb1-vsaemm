@@ -1,18 +1,49 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { searchBusinesses } from '@/lib/rapidapi-client';
+import { Metadata } from 'next';
+import { searchBusinesses } from '@/lib/dataforseo-client';
 import { VendorImage } from './vendor-image';
 
 interface VendorDetails {
   name: string;
-  category: string;
+  category?: string;
   address: string;
-  phone?: string;
+  phone_number?: string;
   website?: string;
   rating?: number;
   latitude: number;
   longitude: number;
-  photo?: string | null;
+  photos?: string[];
+  business_id: string;
+  description?: string;
+  hours?: Record<string, string>;
+  attributes?: {
+    available_attributes?: Record<string, string[]>;
+    unavailable_attributes?: Record<string, string[]>;
+  };
+  price_level?: string;
+  is_claimed?: boolean;
+}
+
+interface BusinessData {
+  name: string;
+  category?: string;
+  address: string;
+  phone_number?: string;
+  website?: string;
+  rating?: number;
+  latitude: number;
+  longitude: number;
+  photos?: string[];
+  business_id: string;
+  description?: string;
+  hours?: Record<string, string>;
+  attributes?: {
+    available_attributes?: Record<string, string[]>;
+    unavailable_attributes?: Record<string, string[]>;
+  };
+  price_level?: string;
+  is_claimed?: boolean;
 }
 
 interface SearchResult {
@@ -24,8 +55,8 @@ interface SearchResult {
   };
 }
 
-const ITEMS_PER_PAGE = 25;
-const ITEMS_PER_ROW = 3; // Number of items in one row based on grid layout
+const ITEMS_PER_PAGE = 20;
+const MIN_RATING = 4; // Only show vendors with 4+ rating
 
 const categoryMap: Record<string, string> = {
   'wedding-venues': 'wedding venue',
@@ -38,6 +69,17 @@ const categoryMap: Record<string, string> = {
   'beauty': 'wedding makeup artist'
 };
 
+const categoryDescriptions: Record<string, string> = {
+  'wedding-venues': 'Find the perfect wedding venue for your special day. Browse top-rated wedding venues with photos, reviews, and detailed information.',
+  'photographers': 'Discover talented wedding photographers who will capture your precious moments. View portfolios, packages, and reviews.',
+  'caterers': 'Explore wedding catering services offering delicious menus for your reception. Compare options, pricing, and reviews.',
+  'florists': 'Browse wedding florists creating stunning floral arrangements for ceremonies and receptions. View designs and get custom quotes.',
+  'djs': 'Find experienced wedding DJs and entertainment services to keep your guests dancing all night. Read reviews and compare packages.',
+  'planners': 'Connect with professional wedding planners who will make your dream wedding a reality. View portfolios and services.',
+  'dress-shops': 'Explore bridal shops offering beautiful wedding dresses and accessories. Find your perfect dress with expert assistance.',
+  'beauty': 'Discover wedding makeup artists and beauty professionals who will help you look stunning on your big day.'
+};
+
 function formatCityName(citySlug: string): string {
   const decodedCity = decodeURIComponent(citySlug);
   return decodedCity
@@ -46,20 +88,62 @@ function formatCityName(citySlug: string): string {
     .join(' ');
 }
 
+export async function generateMetadata({ 
+  params 
+}: { 
+  params: { category: string; id: string } 
+}): Promise<Metadata> {
+  const cityName = formatCityName(params.id);
+  const categoryTitle = params.category
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+
+  const title = `${categoryTitle} in ${cityName} | WeddingVendors`;
+  const description = `${categoryDescriptions[params.category]} Find the best ${categoryMap[params.category]}s in ${cityName}.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      siteName: 'WeddingVendors',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+    alternates: {
+      canonical: `/vendors/${params.category}/${params.id}`,
+    },
+    keywords: [
+      'wedding',
+      params.category.replace('-', ' '),
+      cityName,
+      'wedding planning',
+      'wedding services',
+      'wedding vendors',
+    ],
+  };
+}
+
 async function getVendorsByCity(category: string, citySlug: string, page: number = 1): Promise<SearchResult> {
   const city = formatCityName(citySlug);
-  const searchQuery = `${categoryMap[category]} in ${city}`;
   
   try {
-    console.log('Searching for:', searchQuery, 'in city:', city);
+    console.log('Searching for:', categoryMap[category], 'in city:', city);
     const data = await searchBusinesses({
-      query: searchQuery,
-      citySlug: citySlug.toLowerCase(),
-      limit: 100
+      keyword: categoryMap[category],
+      locationName: city,
+      limit: ITEMS_PER_PAGE,
+      minRating: MIN_RATING
     });
 
     if (!data || !data.data) {
-      console.error('No data returned from API for:', searchQuery);
+      console.error('No data returned from API for:', categoryMap[category], 'in', city);
       return {
         vendors: [],
         pagination: {
@@ -70,32 +154,32 @@ async function getVendorsByCity(category: string, citySlug: string, page: number
       };
     }
 
-    const allVendors = data.data.map((business: any) => ({
+    const vendors = data.data.map((business: BusinessData) => ({
       name: business.name,
-      category: business.type || categoryMap[category],
-      address: business.full_address || `${business.address}, ${city}`,
-      phone: business.phone_number,
+      category: business.category || categoryMap[category],
+      address: business.address,
+      phone_number: business.phone_number,
       website: business.website,
       rating: business.rating,
       latitude: business.latitude,
       longitude: business.longitude,
-      photo: business.photos?.[0] || null
+      photos: business.photos,
+      business_id: business.business_id,
+      description: business.description,
+      hours: business.hours,
+      attributes: business.attributes,
+      price_level: business.price_level,
+      is_claimed: business.is_claimed
     }));
 
-    console.log(`Found ${allVendors.length} vendors for ${city}`);
-
-    const totalResults = allVendors.length;
-    const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE);
-    const startIndex = (page - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    const paginatedVendors = allVendors.slice(startIndex, endIndex);
+    console.log(`Found ${vendors.length} vendors for ${city}`);
 
     return {
-      vendors: paginatedVendors,
+      vendors,
       pagination: {
-        currentPage: page,
-        totalPages,
-        totalResults
+        currentPage: data.pagination.currentPage,
+        totalPages: data.pagination.totalPages,
+        totalResults: data.pagination.totalResults
       }
     };
   } catch (error) {
@@ -197,60 +281,54 @@ export default async function VendorLocationPage({
             `No vendors found in ${cityName}`
           )}
         </p>
+        <p className="text-gray-600 mt-4">
+          {categoryDescriptions[params.category]}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {vendors.map((vendor, index) => {
-          // Prioritize first row of images on first page
-          const shouldPrioritize = currentPage === 1 && index < ITEMS_PER_ROW;
-          
-          return (
-            <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
-              <VendorImage 
-                src={vendor.photo} 
-                alt={vendor.name} 
-                isPriority={shouldPrioritize}
-              />
-              <div className="p-6">
-                <h2 className="text-xl font-semibold mb-2">{vendor.name}</h2>
-                <div className="space-y-2 text-gray-600">
-                  {vendor.rating && (
-                    <p className="flex items-center">
-                      <span className="text-yellow-400 mr-1">★</span>
-                      {vendor.rating.toFixed(1)}
-                    </p>
-                  )}
-                  <p>{vendor.category}</p>
-                  <p>{vendor.address}</p>
-                  {vendor.phone && (
-                    <p>
-                      <a href={`tel:${vendor.phone}`} className="text-blue-600 hover:text-blue-800">
-                        {vendor.phone}
-                      </a>
-                    </p>
-                  )}
-                  {vendor.website && (
-                    <p>
-                      <a 
-                        href={vendor.website} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Visit Website
-                      </a>
-                    </p>
-                  )}
-                  <div className="mt-4 pt-4 border-t">
-                    <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors w-full">
-                      Contact Vendor
-                    </button>
-                  </div>
-                </div>
+        {vendors.map((vendor, index) => (
+          <Link 
+            key={index} 
+            href={`/vendors/${params.category}/${params.id}/${vendor.business_id}`}
+            className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+          >
+            <VendorImage 
+              src={vendor.photos?.[0]} 
+              alt={vendor.name}
+            />
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-2">{vendor.name}</h2>
+              <div className="space-y-2 text-gray-600">
+                {vendor.rating && (
+                  <p className="flex items-center">
+                    <span className="text-yellow-400 mr-1">★</span>
+                    {vendor.rating.toFixed(1)}
+                  </p>
+                )}
+                <p>{vendor.category}</p>
+                <p>{vendor.address}</p>
+                {vendor.price_level && (
+                  <p>Price: {vendor.price_level}</p>
+                )}
+                {vendor.phone_number && (
+                  <p>
+                    <span className="text-blue-600">
+                      {vendor.phone_number}
+                    </span>
+                  </p>
+                )}
+                {vendor.website && (
+                  <p>
+                    <span className="text-blue-600">
+                      Visit Website
+                    </span>
+                  </p>
+                )}
               </div>
             </div>
-          );
-        })}
+          </Link>
+        ))}
       </div>
 
       {pagination.totalPages > 1 && (
