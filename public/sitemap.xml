@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Static Routes -->
   <url>
     <loc>https://findmyweddingvendor.com/</loc>
     <lastmod>2024-01-17</lastmod>
@@ -42,4 +43,76 @@
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
+
+  <!-- State Routes -->
+  <url><loc>https://findmyweddingvendor.com/locations/AL</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/AK</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/AZ</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/AR</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/CA</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/CO</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/CT</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/DE</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/FL</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/GA</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/HI</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/ID</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/IL</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/IN</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/IA</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/KS</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/KY</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/LA</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/ME</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/MD</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/MA</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/MI</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/MN</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/MS</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/MO</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/MT</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/NE</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/NV</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/NH</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/NJ</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/NM</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/NY</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/NC</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/ND</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/OH</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/OK</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/OR</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/PA</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/RI</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/SC</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/SD</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/TN</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/TX</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/UT</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/VT</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/VA</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/WA</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/WV</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/WI</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/WY</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/DC</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+
+  <!-- Major City Routes -->
+  <url><loc>https://findmyweddingvendor.com/locations/new-york-ny</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/los-angeles-ca</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/chicago-il</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/miami-fl</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/dallas-tx</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/houston-tx</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/philadelphia-pa</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/atlanta-ga</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/washington-dc</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/locations/boston-ma</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+
+  <!-- Vendor Category Routes -->
+  <url><loc>https://findmyweddingvendor.com/vendors/wedding-venue</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/vendors/wedding-photographer</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/vendors/wedding-planner</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/vendors/wedding-caterer</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://findmyweddingvendor.com/vendors/wedding-florist</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
 </urlset>

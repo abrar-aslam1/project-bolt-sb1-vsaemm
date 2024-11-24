@@ -10,6 +10,47 @@ const querySchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(10),
 });
 
+// Map state names to abbreviations
+const stateAbbreviations: Record<string, string> = {
+  'California': 'CA',
+  'New York': 'NY',
+  'Texas': 'TX',
+  'Florida': 'FL',
+  'Illinois': 'IL',
+  'Pennsylvania': 'PA',
+  'Arizona': 'AZ',
+  'Georgia': 'GA',
+  'Washington': 'WA',
+  'Massachusetts': 'MA'
+};
+
+// Map state abbreviations back to full names
+const stateNames: Record<string, string> = Object.entries(stateAbbreviations).reduce((acc: Record<string, string>, [name, abbr]) => {
+  acc[abbr] = name;
+  return acc;
+}, {});
+
+function formatLocation(location: string): string {
+  // Split location into city and state
+  const [city, stateAbbr] = location.split(',').map(part => part.trim());
+  
+  // If we have a state abbreviation, verify it's correct
+  if (stateAbbr && stateAbbr.length === 2) {
+    return `${city}, ${stateAbbr.toUpperCase()}`;
+  }
+  
+  // Try to find the state name in the location string
+  const foundState = Object.entries(stateAbbreviations).find(([stateName]) =>
+    location.toLowerCase().includes(stateName.toLowerCase())
+  );
+  
+  if (foundState) {
+    return `${city}, ${foundState[1]}`;
+  }
+  
+  return location;
+}
+
 export const runtime = 'edge';
 
 export async function GET(request: Request) {
@@ -27,7 +68,12 @@ export async function GET(request: Request) {
     if (query.locations) {
       const locationList = query.locations.split(',').map(loc => loc.trim());
       if (locationList.length > 0) {
-        queryBuilder = queryBuilder.ilike('location', `%${locationList[0]}%`);
+        // Convert state abbreviation to full name if needed
+        const location = locationList[0];
+        const stateAbbr = location.split(',')[1]?.trim();
+        const stateName = stateNames[stateAbbr] || stateAbbr;
+        
+        queryBuilder = queryBuilder.or(`location.ilike.%${location}%,location.ilike.%${stateName}%`);
       }
     }
     
@@ -41,8 +87,27 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
+    // Format locations to ensure consistency
+    const formattedResults = results?.map(vendor => ({
+      ...vendor,
+      location: formatLocation(vendor.location)
+    }));
+
+    // Update the locations in the database
+    if (formattedResults) {
+      for (const vendor of formattedResults) {
+        const originalVendor = results.find(v => v.id === vendor.id);
+        if (vendor.location !== originalVendor?.location) {
+          await supabase
+            .from('vendors')
+            .update({ location: vendor.location })
+            .eq('id', vendor.id);
+        }
+      }
+    }
+
     return NextResponse.json({
-      vendors: results || [],
+      vendors: formattedResults || [],
       pagination: {
         currentPage: query.page,
         totalPages: Math.ceil((totalCount || 0) / query.limit),
