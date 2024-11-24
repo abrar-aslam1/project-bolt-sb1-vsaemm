@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import { searchBusinesses } from '@/lib/dataforseo-client';
-import { VendorImage } from './vendor-image';
+import Image from 'next/image';
 
 interface VendorDetails {
   name: string;
@@ -157,10 +157,21 @@ function VendorCard({
       className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
     >
       <Suspense fallback={<div className="h-48 bg-gray-200 animate-pulse" />}>
-        <VendorImage 
-          src={vendor.photos?.[0]} 
-          alt={vendor.name}
-        />
+        <div className="relative h-48 w-full">
+          {vendor.main_image ? (
+            <Image
+              src={vendor.main_image}
+              alt={vendor.name}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          ) : (
+            <div className="h-48 bg-gray-200 flex items-center justify-center">
+              <span className="text-gray-400">No image available</span>
+            </div>
+          )}
+        </div>
       </Suspense>
       <div className="p-6">
         <h2 className="text-xl font-semibold mb-2">{vendor.name}</h2>
@@ -268,14 +279,37 @@ export default async function VendorLocationPage({
 
   try {
     const { vendors, pagination } = await getVendorsByCity(params.category, params.id, currentPage);
-    console.log('Fetched vendors:', {
-      count: vendors.length,
-      pagination
-    });
-
+    console.log('Fetched vendors:', vendors.length);
+    
+    // If no vendors are found and it's not due to an unsupported location
     if (vendors.length === 0 && currentPage === 1) {
       console.log('No vendors found');
-      notFound();
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8">
+            <Link 
+              href={`/vendors/${params.category}`}
+              className="text-blue-600 hover:text-blue-800 mb-4 inline-block"
+            >
+              ← Back to Categories
+            </Link>
+            <h1 className="text-4xl font-bold">
+              No Results Found
+            </h1>
+            <p className="text-gray-600 mt-4">
+              We couldn't find any vendors in this location. This could be because:
+            </p>
+            <ul className="list-disc ml-8 mt-2 text-gray-600">
+              <li>The location is not currently supported in our system</li>
+              <li>There are no vendors matching your criteria in this area</li>
+              <li>The location name might be misspelled</li>
+            </ul>
+            <p className="text-gray-600 mt-4">
+              Please try searching in a different location or contact us for assistance.
+            </p>
+          </div>
+        </div>
+      );
     }
 
     const cityName = formatCityName(params.id);

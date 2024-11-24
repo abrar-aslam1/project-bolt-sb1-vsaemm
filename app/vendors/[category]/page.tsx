@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { citiesByState } from '@/lib/rapidapi-client';
+import { citiesByState } from '@/lib/locations';
 
 const categoryTitles: Record<string, string> = {
   'wedding-venues': 'Wedding Venues',

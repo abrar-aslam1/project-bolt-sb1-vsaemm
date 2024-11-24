@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { unstable_cache } from 'next/cache';
+import { locationCodes } from './locations';
 
 const DATAFORSEO_USERNAME = 'abrar@amarosystems.com';
 const DATAFORSEO_PASSWORD = '69084d8c8dcf81cd';
@@ -58,13 +59,29 @@ interface SearchResponse {
 export const searchBusinesses = unstable_cache(
   async ({ 
     keyword, 
-    locationName = "New York, New York, United States",
-    locationCode = 1023191, 
+    locationName,
     languageCode = 'en',
     limit = 20,
     minRating = 4 
   }: SearchParams): Promise<SearchResponse> => {
     try {
+      // Convert location name to code
+      const locationSlug = locationName?.toLowerCase().replace(/\s+/g, '-');
+      const locationCode = locationSlug ? locationCodes[locationSlug] : undefined;
+
+      if (!locationCode) {
+        console.warn(`No location code found for: ${locationName}`);
+        return {
+          data: [],
+          pagination: {
+            totalResults: 0,
+            totalPages: 0,
+            currentPage: 1,
+            limit
+          }
+        };
+      }
+
       console.log('Searching with params:', { keyword, locationName, locationCode, limit });
       
       const instance = axios.create({
@@ -75,7 +92,7 @@ export const searchBusinesses = unstable_cache(
       });
 
       const requestData = [{
-        keyword: `${keyword} ${locationName}`,
+        keyword,
         language_code: languageCode,
         location_code: locationCode,
         limit: limit,
@@ -96,13 +113,53 @@ export const searchBusinesses = unstable_cache(
         data: requestData
       });
 
-      console.log('API Response Status:', response.data?.status_code, response.data?.status_message);
+      console.log('Full API Response:', JSON.stringify(response.data, null, 2));
+
+      if (response.data?.status_code !== 20000) {
+        console.error('API Error:', response.data?.status_message);
+        return {
+          data: [],
+          pagination: {
+            totalResults: 0,
+            totalPages: 0,
+            currentPage: 1,
+            limit
+          }
+        };
+      }
+
+      const task = response.data?.tasks?.[0];
       
-      const result = response.data?.tasks?.[0]?.result?.[0];
+      if (!task) {
+        console.error('No task data in response');
+        return {
+          data: [],
+          pagination: {
+            totalResults: 0,
+            totalPages: 0,
+            currentPage: 1,
+            limit
+          }
+        };
+      }
+
+      if (task.status_code !== 20000) {
+        console.error('Task Error:', task.status_message);
+        return {
+          data: [],
+          pagination: {
+            totalResults: 0,
+            totalPages: 0,
+            currentPage: 1,
+            limit
+          }
+        };
+      }
+
+      const result = task.result?.[0];
       
       if (!result || !result.items) {
         console.warn('No results found for:', keyword, 'in', locationName);
-        console.log('API Response:', JSON.stringify(response.data, null, 2));
         return {
           data: [],
           pagination: {
@@ -152,7 +209,9 @@ export const searchBusinesses = unstable_cache(
         if (error.code === 'ECONNABORTED') {
           console.error('Request timed out');
         }
-        console.error('API Response:', error.response?.data);
+        if (error.response) {
+          console.error('API Error Response:', error.response.data);
+        }
       }
       throw error; // Let the error boundary handle it
     }
