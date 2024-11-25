@@ -22,7 +22,7 @@ export const locationCodes: Record<string, number> = {
   'phoenix': 1015214,
   'tucson': 1015239,
   'scottsdale': 1015227,
-  'los-angeles': 1012873,
+  'los-angeles': 1023191,
   'san-francisco': 1014895,
   'san-diego': 1014847,
   'sacramento': 1014836,

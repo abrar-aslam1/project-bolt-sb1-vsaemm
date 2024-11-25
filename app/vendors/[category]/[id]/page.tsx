@@ -1,9 +1,14 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { Suspense } from 'react';
-import { searchBusinesses } from '@/lib/dataforseo-client';
+import { searchBusinesses } from '../../../../lib/dataforseo-client';
 import Image from 'next/image';
+
+// Set longer timeout for this page
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+export const runtime = 'nodejs';
 
 interface VendorDetails {
   name: string;
@@ -103,43 +108,15 @@ async function getVendorsByCity(category: string, citySlug: string, page: number
     };
   } catch (error) {
     console.error('Error fetching vendors:', error);
-    throw error;
+    return {
+      vendors: [],
+      pagination: {
+        currentPage: 1,
+        totalPages: 0,
+        totalResults: 0
+      }
+    };
   }
-}
-
-function VendorGrid({ vendors, category, citySlug }: { 
-  vendors: VendorDetails[];
-  category: string;
-  citySlug: string;
-}) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {vendors.map((vendor) => {
-        const vendorKey = `${vendor.business_id}-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`;
-        return (
-          <Suspense 
-            key={vendorKey}
-            fallback={
-              <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
-                <div className="h-48 bg-gray-200"></div>
-                <div className="p-6 space-y-3">
-                  <div className="h-6 w-3/4 bg-gray-200 rounded"></div>
-                  <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
-                  <div className="h-4 w-full bg-gray-200 rounded"></div>
-                </div>
-              </div>
-            }
-          >
-            <VendorCard 
-              vendor={vendor} 
-              category={category}
-              citySlug={citySlug}
-            />
-          </Suspense>
-        );
-      })}
-    </div>
-  );
 }
 
 function VendorCard({ 
@@ -156,23 +133,22 @@ function VendorCard({
       href={`/vendors/${category}/${citySlug}/${vendor.business_id}`}
       className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
     >
-      <Suspense fallback={<div className="h-48 bg-gray-200 animate-pulse" />}>
-        <div className="relative h-48 w-full">
-          {vendor.main_image ? (
-            <Image
-              src={vendor.main_image}
-              alt={vendor.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />
-          ) : (
-            <div className="h-48 bg-gray-200 flex items-center justify-center">
-              <span className="text-gray-400">No image available</span>
-            </div>
-          )}
-        </div>
-      </Suspense>
+      <div className="relative h-48 w-full">
+        {vendor.main_image ? (
+          <Image
+            src={vendor.main_image}
+            alt={vendor.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority={true}
+          />
+        ) : (
+          <div className="h-48 bg-gray-200 flex items-center justify-center">
+            <span className="text-gray-400">No image available</span>
+          </div>
+        )}
+      </div>
       <div className="p-6">
         <h2 className="text-xl font-semibold mb-2">{vendor.name}</h2>
         <div className="space-y-2 text-gray-600">
@@ -205,6 +181,28 @@ function VendorCard({
         </div>
       </div>
     </Link>
+  );
+}
+
+function VendorGrid({ vendors, category, citySlug }: { 
+  vendors: VendorDetails[];
+  category: string;
+  citySlug: string;
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {vendors.map((vendor) => {
+        const vendorKey = `${vendor.business_id}-${vendor.name.toLowerCase().replace(/\s+/g, '-')}`;
+        return (
+          <VendorCard 
+            key={vendorKey}
+            vendor={vendor} 
+            category={category}
+            citySlug={citySlug}
+          />
+        );
+      })}
+    </div>
   );
 }
 
@@ -277,47 +275,12 @@ export default async function VendorLocationPage({
     page: currentPage
   });
 
-  try {
-    const { vendors, pagination } = await getVendorsByCity(params.category, params.id, currentPage);
-    console.log('Fetched vendors:', vendors.length);
-    
-    // If no vendors are found and it's not due to an unsupported location
-    if (vendors.length === 0 && currentPage === 1) {
-      console.log('No vendors found');
-      return (
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <Link 
-              href={`/vendors/${params.category}`}
-              className="text-blue-600 hover:text-blue-800 mb-4 inline-block"
-            >
-              ← Back to Categories
-            </Link>
-            <h1 className="text-4xl font-bold">
-              No Results Found
-            </h1>
-            <p className="text-gray-600 mt-4">
-              We couldn't find any vendors in this location. This could be because:
-            </p>
-            <ul className="list-disc ml-8 mt-2 text-gray-600">
-              <li>The location is not currently supported in our system</li>
-              <li>There are no vendors matching your criteria in this area</li>
-              <li>The location name might be misspelled</li>
-            </ul>
-            <p className="text-gray-600 mt-4">
-              Please try searching in a different location or contact us for assistance.
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    const cityName = formatCityName(params.id);
-    const categoryTitle = params.category
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-
+  const { vendors, pagination } = await getVendorsByCity(params.category, params.id, currentPage);
+  console.log('Fetched vendors:', vendors.length);
+  
+  // If no vendors are found and it's not due to an unsupported location
+  if (vendors.length === 0 && currentPage === 1) {
+    console.log('No vendors found');
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
@@ -325,58 +288,71 @@ export default async function VendorLocationPage({
             href={`/vendors/${params.category}`}
             className="text-blue-600 hover:text-blue-800 mb-4 inline-block"
           >
-            ← Back to {categoryTitle}
+            ← Back to Categories
           </Link>
           <h1 className="text-4xl font-bold">
-            {categoryTitle} in {cityName}
+            No Results Found
           </h1>
-          <p className="text-gray-600 mt-2">
-            {pagination.totalResults > 0 ? (
-              `Showing ${(currentPage - 1) * ITEMS_PER_PAGE + 1}-${Math.min(currentPage * ITEMS_PER_PAGE, pagination.totalResults)} of ${pagination.totalResults} vendors in ${cityName}`
-            ) : (
-              `No vendors found in ${cityName}`
-            )}
-          </p>
           <p className="text-gray-600 mt-4">
-            {categoryDescriptions[params.category]}
+            We couldn't find any vendors in this location. This could be because:
+          </p>
+          <ul className="list-disc ml-8 mt-2 text-gray-600">
+            <li>The location is not currently supported in our system</li>
+            <li>There are no vendors matching your criteria in this area</li>
+            <li>The location name might be misspelled</li>
+          </ul>
+          <p className="text-gray-600 mt-4">
+            Please try searching in a different location or contact us for assistance.
           </p>
         </div>
-
-        <Suspense 
-          fallback={
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
-                  <div className="h-48 bg-gray-200"></div>
-                  <div className="p-6 space-y-3">
-                    <div className="h-6 w-3/4 bg-gray-200 rounded"></div>
-                    <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
-                    <div className="h-4 w-full bg-gray-200 rounded"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          }
-        >
-          <VendorGrid 
-            vendors={vendors} 
-            category={params.category}
-            citySlug={params.id}
-          />
-        </Suspense>
-
-        {pagination.totalPages > 1 && (
-          <PaginationControls
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            category={params.category}
-            citySlug={params.id}
-          />
-        )}
       </div>
     );
-  } catch (error) {
-    console.error('Error in vendor page:', error);
-    throw error; // Let error boundary handle it
   }
+
+  const cityName = formatCityName(params.id);
+  const categoryTitle = params.category
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <Link 
+          href={`/vendors/${params.category}`}
+          className="text-blue-600 hover:text-blue-800 mb-4 inline-block"
+        >
+          ← Back to {categoryTitle}
+        </Link>
+        <h1 className="text-4xl font-bold">
+          {categoryTitle} in {cityName}
+        </h1>
+        <p className="text-gray-600 mt-2">
+          {pagination.totalResults > 0 ? (
+            `Showing ${(currentPage - 1) * ITEMS_PER_PAGE + 1}-${Math.min(currentPage * ITEMS_PER_PAGE, pagination.totalResults)} of ${pagination.totalResults} vendors in ${cityName}`
+          ) : (
+            `No vendors found in ${cityName}`
+          )}
+        </p>
+        <p className="text-gray-600 mt-4">
+          {categoryDescriptions[params.category]}
+        </p>
+      </div>
+
+      <VendorGrid 
+        vendors={vendors} 
+        category={params.category}
+        citySlug={params.id}
+      />
+
+      {pagination.totalPages > 1 && (
+        <PaginationControls
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          category={params.category}
+          citySlug={params.id}
+        />
+      )}
+    </div>
+  );
 }
