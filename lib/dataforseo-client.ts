@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { unstable_cache } from 'next/cache';
-import { locationCodes } from './locations';
+import { locationCoordinates } from './locations';
 
 const DATAFORSEO_USERNAME = 'abrar@amarosystems.com';
 const DATAFORSEO_PASSWORD = '69084d8c8dcf81cd';
@@ -8,7 +8,6 @@ const DATAFORSEO_PASSWORD = '69084d8c8dcf81cd';
 interface SearchParams {
   keyword: string;
   locationName?: string;
-  locationCode?: number;
   languageCode?: string;
   limit?: number;
   minRating?: number;
@@ -65,16 +64,16 @@ export const searchBusinesses = unstable_cache(
     minRating = 4 
   }: SearchParams): Promise<SearchResponse> => {
     try {
-      // Convert location name to code
+      // Convert location name to slug for coordinates lookup
       console.log('Original location name:', locationName);
       const locationSlug = locationName?.toLowerCase().replace(/\s+/g, '-');
       console.log('Converted to slug:', locationSlug);
-      console.log('Available location codes:', Object.keys(locationCodes));
-      const locationCode = locationSlug ? locationCodes[locationSlug] : undefined;
-      console.log('Found location code:', locationCode);
+      console.log('Available locations:', Object.keys(locationCoordinates));
+      const locationCoordinate = locationSlug ? locationCoordinates[locationSlug] : undefined;
+      console.log('Found location coordinate:', locationCoordinate);
 
-      if (!locationCode) {
-        console.warn(`No location code found for: ${locationName} (slug: ${locationSlug})`);
+      if (!locationCoordinate) {
+        console.warn(`No location coordinates found for: ${locationName} (slug: ${locationSlug})`);
         return {
           data: [],
           pagination: {
@@ -86,7 +85,7 @@ export const searchBusinesses = unstable_cache(
         };
       }
 
-      console.log('Searching with params:', { keyword, locationName, locationCode, limit });
+      console.log('Searching with params:', { keyword, locationName, locationCoordinate, limit });
       
       const instance = axios.create({
         timeout: 60000, // Increased to 60 second timeout
@@ -98,11 +97,13 @@ export const searchBusinesses = unstable_cache(
       const requestData = [{
         keyword,
         language_code: languageCode,
-        location_code: locationCode,
+        location_coordinate: locationCoordinate,
+        categories: ["wedding_venue", "wedding_photographer", "wedding_planner"],
         limit: limit,
         filters: [
           ["rating.value", ">", minRating]
-        ]
+        ],
+        order_by: ["rating.value,desc"]
       }];
 
       console.log('Request data:', JSON.stringify(requestData, null, 2));
@@ -110,7 +111,7 @@ export const searchBusinesses = unstable_cache(
       try {
         const response = await instance({
           method: 'post',
-          url: 'https://api.dataforseo.com/v3/serp/google/maps/live/advanced',
+          url: 'https://api.dataforseo.com/v3/business_data/business_listings/search/live',
           auth: {
             username: DATAFORSEO_USERNAME,
             password: DATAFORSEO_PASSWORD
