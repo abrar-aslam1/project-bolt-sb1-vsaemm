@@ -10,10 +10,10 @@ if (!uri) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
+    const queryParam = searchParams.get('q');
 
     // Return empty array if no query provided
-    if (!query) {
+    if (!queryParam) {
       return NextResponse.json([]);
     }
 
@@ -23,10 +23,10 @@ export async function GET(request: Request) {
     const db = client.db('wedding_vendors');
     const vendors = await db.collection('vendors').find({
       $or: [
-        { name: { $regex: query, $options: 'i' } },
-        { category: { $regex: query, $options: 'i' } },
-        { location: { $regex: query, $options: 'i' } },
-        { description: { $regex: query, $options: 'i' } },
+        { name: { $regex: queryParam, $options: 'i' } },
+        { category: { $regex: queryParam, $options: 'i' } },
+        { location: { $regex: queryParam, $options: 'i' } },
+        { description: { $regex: queryParam, $options: 'i' } },
       ],
     }).limit(20).toArray();
 
