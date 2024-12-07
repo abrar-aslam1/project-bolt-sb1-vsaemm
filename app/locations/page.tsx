@@ -1,111 +1,79 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import Link from 'next/link';
-import { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Wedding Vendors by Location | Find Local Wedding Services',
-  description: 'Browse wedding vendors across all 50 US states. Find local wedding venues, photographers, caterers, florists, DJs, planners, and more in your area.',
-};
+import Link from 'next/link';
+import { citiesByState, locationCoordinates } from '@/lib/locations';
 
 interface State {
-  state_id: string;
   state_name: string;
   cities: string[];
-  businesses: number;
 }
 
-async function getStateData(): Promise<State[]> {
-  try {
-    const filePath = path.join(process.cwd(), 'locations.csv');
-    const fileContent = await fs.readFile(filePath, 'utf-8');
-    const rows = fileContent.split('\n').slice(1); // Skip header
-    
-    const statesMap = new Map<string, State>();
-    
-    rows.forEach(row => {
-      if (!row.trim()) return; // Skip empty rows
-      
-      const columns = row.split(',');
-      if (columns.length >= 4) {
-        const stateId = columns[2]?.replace(/"/g, '');
-        const stateName = columns[3]?.replace(/"/g, '');
-        const city = columns[0]?.replace(/"/g, '');
-        
-        if (stateId && stateName) {
-          if (!statesMap.has(stateId)) {
-            statesMap.set(stateId, {
-              state_id: stateId,
-              state_name: stateName,
-              cities: [],
-              businesses: 0
-            });
-          }
-          
-          const state = statesMap.get(stateId)!;
-          if (!state.cities.includes(city)) {
-            state.cities.push(city);
-          }
-          state.businesses += 1;
-        }
-      }
-    });
+function getStateData(): State[] {
+  const states = Object.entries(citiesByState).map(([state_name, cities]) => ({
+    state_name,
+    cities
+  }));
 
-    return Array.from(statesMap.values())
-      .sort((a, b) => a.state_name.localeCompare(b.state_name));
-  } catch (error) {
-    console.error('Error reading locations:', error);
-    return [];
-  }
+  return states.sort((a, b) => a.state_name.localeCompare(b.state_name));
 }
 
-export default async function LocationsPage() {
-  const states = await getStateData();
+// Convert city name to match locationCoordinates keys
+function cityToSlug(city: string): string {
+  return city.toLowerCase().replace(/\s+/g, '-');
+}
+
+// Verify if a city slug exists in locationCoordinates
+function isValidLocation(citySlug: string): boolean {
+  return citySlug in locationCoordinates;
+}
+
+export default function LocationsPage() {
+  const states = getStateData();
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">Find Wedding Vendors by Location</h1>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Browse wedding vendors across all 50 US states. Whether you're planning a destination wedding 
+          Browse wedding vendors across major US cities. Whether you're planning a destination wedding 
           or looking for local vendors, find the perfect match for your special day.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {states.map((state) => (
-          <Link
-            key={state.state_id}
-            href={`/vendors/wedding-venues/${state.state_name.toLowerCase().replace(/\s+/g, '-')}`}
+          <div
+            key={state.state_name}
             className="block p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
           >
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">{state.state_name}</h2>
-                <span className="text-sm text-gray-500">{state.state_id}</span>
               </div>
               <div className="text-sm text-gray-600">
                 <p>{state.cities.length} {state.cities.length === 1 ? 'City' : 'Cities'}</p>
-                <p>{state.businesses} {state.businesses === 1 ? 'Business' : 'Businesses'}</p>
               </div>
-              <div className="text-blue-600 text-sm flex items-center mt-2">
-                View Vendors
-                <svg 
-                  className="w-4 h-4 ml-1" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M9 5l7 7-7 7" 
-                  />
-                </svg>
+              <div className="mt-4 space-y-2">
+                {state.cities.map((city) => {
+                  const citySlug = cityToSlug(city);
+                  // Only create links for cities that exist in locationCoordinates
+                  if (isValidLocation(citySlug)) {
+                    return (
+                      <Link
+                        key={`${state.state_name}-${city}`}
+                        href={`/search?q=wedding venue ${citySlug}`}
+                        className="block text-blue-600 hover:text-blue-800 text-sm"
+                      >
+                        {city}
+                        <span className="text-gray-400 text-xs ml-2">→</span>
+                      </Link>
+                    );
+                  }
+                  return null;
+                })}
               </div>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
 

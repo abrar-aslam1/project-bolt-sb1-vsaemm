@@ -1,66 +1,59 @@
-import { NextResponse } from "next/server";
-import { z } from "zod";
-import { supabase } from "../../../lib/supabase";
+import { NextResponse } from 'next/server';
+import { MongoClient } from 'mongodb';
 
-const querySchema = z.object({
-  category: z.string().optional(),
-  locations: z.string().optional(),
-  search: z.string().optional(),
-  page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(10),
-});
+const uri = process.env.MONGODB_URI;
 
-export const runtime = 'edge';
+if (!uri) {
+  throw new Error('Please add your Mongo URI to .env.local');
+}
 
 export async function GET(request: Request) {
   try {
-    const url = new URL(request.url);
-    const query = querySchema.parse(Object.fromEntries(url.searchParams));
-    
-    const offset = (query.page - 1) * query.limit;
-    let queryBuilder = supabase.from('vendors').select('*', { count: 'exact' });
-    
-    if (query.category && query.category !== "All Categories") {
-      queryBuilder = queryBuilder.eq('category', query.category);
-    }
-    
-    if (query.locations) {
-      const locationList = query.locations.split(',').map(loc => loc.trim());
-      if (locationList.length > 0) {
-        queryBuilder = queryBuilder.ilike('location', `%${locationList[0]}%`);
-      }
-    }
-    
-    if (query.search) {
-      queryBuilder = queryBuilder.ilike('name', `%${query.search}%`);
+    const { searchParams } = new URL(request.url);
+    const query = searchParams.get('q');
+
+    // Return empty array if no query provided
+    if (!query) {
+      return NextResponse.json([]);
     }
 
-    const { data: results, count: totalCount, error } = await queryBuilder
-      .order('created_at', { ascending: false })
-      .range(offset, offset + query.limit - 1);
+    const client = new MongoClient(uri);
+    await client.connect();
 
-    if (error) throw error;
+    const db = client.db('wedding_vendors');
+    const vendors = await db.collection('vendors').find({
+      $or: [
+        { name: { $regex: query, $options: 'i' } },
+        { category: { $regex: query, $options: 'i' } },
+        { location: { $regex: query, $options: 'i' } },
+        { description: { $regex: query, $options: 'i' } },
+      ],
+    }).limit(20).toArray();
 
-    return NextResponse.json({
-      vendors: results || [],
-      pagination: {
-        currentPage: query.page,
-        totalPages: Math.ceil((totalCount || 0) / query.limit),
-        totalItems: totalCount || 0,
-      },
-    });
+    await client.close();
+
+    // If no vendors found, return empty array
+    if (!vendors.length) {
+      return NextResponse.json([]);
+    }
+
+    // Transform the data to match the expected format
+    const transformedVendors = vendors.map(vendor => ({
+      id: vendor._id.toString(),
+      name: vendor.name || '',
+      category: vendor.category || '',
+      description: vendor.description || '',
+      location: vendor.location || '',
+      rating: vendor.rating || 4.5,
+      image: vendor.image || '/placeholder-venue.jpg'
+    }));
+
+    return NextResponse.json(transformedVendors);
+
   } catch (error) {
-    console.error("Error fetching vendors:", error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid query parameters", details: error.errors },
-        { status: 400 }
-      );
-    }
-    
+    console.error('Error fetching vendors:', error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: 'Failed to fetch vendors' },
       { status: 500 }
     );
   }

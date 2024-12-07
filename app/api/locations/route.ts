@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "../../../lib/supabase";
+import { citiesByState } from "@/lib/locations";
 
 export const runtime = 'edge';
 
@@ -8,24 +8,26 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q')?.toLowerCase() || '';
     
-    let queryBuilder = supabase.from('locations').select('*');
+    // Convert citiesByState to a flat array of locations
+    const locations = Object.entries(citiesByState).flatMap(([state, cities]) =>
+      cities.map(city => ({
+        id: `${city}-${state}`.toLowerCase().replace(/\s+/g, '-'),
+        label: `${city}, ${state}`,
+        city: city,
+        state: state,
+        slug: city.toLowerCase().replace(/\s+/g, '-')
+      }))
+    );
+
+    // Filter locations if query exists
+    const filteredLocations = query
+      ? locations.filter(loc => 
+          loc.city.toLowerCase().includes(query) ||
+          loc.state.toLowerCase().includes(query)
+        )
+      : locations;
     
-    if (query) {
-      queryBuilder = queryBuilder.or(`city.ilike.%${query}%,state_name.ilike.%${query}%`);
-    }
-
-    const { data: locations, error } = await queryBuilder.limit(10);
-
-    if (error) throw error;
-
-    const formattedLocations = (locations || []).map(location => ({
-      id: location.id,
-      label: `${location.city}, ${location.state_id}`,
-      city: location.city,
-      state: location.state_id
-    }));
-    
-    return NextResponse.json(formattedLocations);
+    return NextResponse.json(filteredLocations.slice(0, 10));
   } catch (error) {
     console.error("Error fetching locations:", error);
     return NextResponse.json(

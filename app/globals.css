@@ -1,129 +1,78 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
-
-:root {
-  --foreground-rgb: 51, 51, 51;
-  --background-start-rgb: 255, 251, 250;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 28, 28, 35;
-    --background-end-rgb: 18, 18, 23;
-  }
-}
-
+ 
 @layer base {
   :root {
-    --background: 340 33% 98%;
-    --foreground: 340 6% 15%;
-    
-    --card: 340 33% 99%;
-    --card-foreground: 340 6% 15%;
-    
-    --popover: 340 33% 99%;
-    --popover-foreground: 340 6% 15%;
-    
-    --primary: 340 80% 65%;
-    --primary-foreground: 340 33% 99%;
-    
-    --secondary: 340 20% 96%;
-    --secondary-foreground: 340 6% 15%;
-    
-    --muted: 340 20% 96%;
-    --muted-foreground: 340 6% 45%;
-    
-    --accent: 340 40% 92%;
-    --accent-foreground: 340 6% 15%;
-    
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 340 33% 99%;
-    
-    --border: 340 20% 90%;
-    --input: 340 20% 90%;
-    --ring: 340 80% 65%;
-    
-    --radius: 0.75rem;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+ 
+    --primary: 330 81% 60%;
+    --primary-foreground: 210 40% 98%;
+ 
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --ring: 215 20.2% 65.1%;
+ 
+    --radius: 0.5rem;
   }
  
   .dark {
-    --background: 240 10% 8%;
-    --foreground: 340 20% 98%;
-    
-    --card: 240 10% 8%;
-    --card-foreground: 340 20% 98%;
-    
-    --popover: 240 10% 8%;
-    --popover-foreground: 340 20% 98%;
-    
-    --primary: 340 70% 70%;
-    --primary-foreground: 340 10% 8%;
-    
-    --secondary: 240 15% 15%;
-    --secondary-foreground: 340 20% 98%;
-    
-    --muted: 240 15% 15%;
-    --muted-foreground: 340 20% 70%;
-    
-    --accent: 240 15% 15%;
-    --accent-foreground: 340 20% 98%;
-    
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+ 
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+ 
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+ 
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+ 
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+ 
+    --primary: 330 81% 60%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+ 
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+ 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 340 20% 98%;
-    
-    --border: 240 15% 20%;
-    --input: 240 15% 20%;
-    --ring: 340 70% 70%;
+    --destructive-foreground: 0 85.7% 97.3%;
+ 
+    --ring: 217.2 32.6% 17.5%;
   }
 }
-
+ 
 @layer base {
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
-  }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Sora', sans-serif;
-    @apply font-medium tracking-tight;
-  }
-  h1 {
-    @apply text-4xl md:text-5xl lg:text-6xl leading-tight;
-    letter-spacing: -0.02em;
-  }
-  h2 {
-    @apply text-3xl md:text-4xl leading-snug;
-    letter-spacing: -0.01em;
-  }
-  h3 {
-    @apply text-2xl md:text-3xl leading-snug;
-  }
-  h4 {
-    @apply text-xl md:text-2xl;
-  }
-  body {
-    font-family: 'Inter', sans-serif;
-    @apply text-base leading-relaxed font-normal;
-    letter-spacing: -0.01em;
-  }
-  p {
-    @apply mb-4;
-  }
-}
-
-@layer utilities {
-  .wedding-gradient {
-    background: linear-gradient(135deg, hsl(340, 80%, 65%) 0%, hsl(320, 70%, 75%) 100%);
-  }
-  .wedding-text-gradient {
-    background: linear-gradient(135deg, hsl(340, 80%, 65%) 0%, hsl(320, 70%, 75%) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
   }
 }
