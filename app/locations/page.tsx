@@ -11,7 +11,7 @@ interface State {
 function getStateData(): State[] {
   const states = Object.entries(citiesByState).map(([state_name, cities]) => ({
     state_name,
-    cities
+    cities: cities as string[]
   }));
 
   return states.sort((a, b) => a.state_name.localeCompare(b.state_name));
