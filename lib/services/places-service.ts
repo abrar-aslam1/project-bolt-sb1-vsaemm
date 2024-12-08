@@ -19,14 +19,29 @@ interface Location {
 
 // Map URL slugs to CSV category names
 const categoryMapping: Record<string, string> = {
+  'venue': 'Wedding Venue',
+  'venues': 'Wedding Venue',
   'wedding-venues': 'Wedding Venue',
+  'photographer': 'Wedding Photographer',
   'photographers': 'Wedding Photographer',
+  'photography': 'Wedding Photographer',
+  'caterer': 'Wedding Caterer',
   'caterers': 'Wedding Caterer',
+  'catering': 'Wedding Caterer',
+  'florist': 'Wedding Florist',
   'florists': 'Wedding Florist',
-  'djs': 'Wedding DJ',
+  'flowers': 'Wedding Florist',
+  'planner': 'Wedding Planner',
   'planners': 'Wedding Planner',
+  'planning': 'Wedding Planner',
+  'dress': 'Wedding Dress Shop',
+  'dresses': 'Wedding Dress Shop',
   'dress-shops': 'Wedding Dress Shop',
-  'beauty': 'Wedding Makeup Artist'
+  'beauty': 'Wedding Makeup Artist',
+  'makeup': 'Wedding Makeup Artist',
+  'dj': 'Wedding DJ',
+  'djs': 'Wedding DJ',
+  'music': 'Wedding DJ'
 };
 
 export class PlacesService {
@@ -35,9 +50,19 @@ export class PlacesService {
   }
 
   private static normalizeCategory(category: string): string {
-    // First map the URL slug to the proper category name
-    const mappedCategory = categoryMapping[category] || category;
-    return this.normalizeString(mappedCategory);
+    // First check if there's a direct mapping
+    const mappedCategory = categoryMapping[category.toLowerCase()];
+    if (mappedCategory) {
+      return mappedCategory;
+    }
+
+    // If no direct mapping, try to construct the category name
+    const normalizedCategory = this.normalizeString(category);
+    if (!normalizedCategory.includes('wedding')) {
+      return `Wedding ${category.charAt(0).toUpperCase() + category.slice(1)}`;
+    }
+
+    return category.charAt(0).toUpperCase() + category.slice(1);
   }
 
   private static async getLocations(): Promise<Location[]> {
@@ -51,6 +76,11 @@ export class PlacesService {
 
   private static async searchGooglePlaces(query: string, lat: number, lng: number): Promise<Place[]> {
     const url = `https://places.googleapis.com/v1/places:searchText`;
+    
+    // Format the query to be more specific for wedding services
+    const formattedQuery = `${query} wedding services`;
+    console.log('Google Places API Query:', formattedQuery);
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -68,7 +98,7 @@ export class PlacesService {
         ].join(',')
       },
       body: JSON.stringify({
-        textQuery: query,
+        textQuery: formattedQuery,
         locationBias: {
           circle: {
             center: {
@@ -78,15 +108,24 @@ export class PlacesService {
             radius: 20000.0 // 20km radius
           }
         },
-        maxResultCount: 20
+        maxResultCount: 20,
+        languageCode: "en"
       })
     });
 
     if (!response.ok) {
+      console.error('Google Places API Error:', await response.text());
       throw new Error('Failed to fetch from Google Places API');
     }
 
     const data = await response.json();
+    console.log('Google Places API Response:', JSON.stringify(data, null, 2));
+
+    if (!data.places || !Array.isArray(data.places)) {
+      console.error('No places found in response');
+      return [];
+    }
+
     return data.places.map((place: any) => ({
       placeId: place.id,
       name: place.displayName.text,
@@ -123,7 +162,11 @@ export class PlacesService {
     const placesCollection = db.collection('places');
 
     // Insert individual places
-    await placesCollection.insertMany(places, { ordered: false });
+    if (places.length > 0) {
+      await placesCollection.insertMany(places, { ordered: false }).catch(err => {
+        console.log('Some places already exist in the database');
+      });
+    }
 
     // Cache the search results
     await collection.updateOne(
@@ -147,19 +190,28 @@ export class PlacesService {
   static async searchPlaces(category: string, city: string, state: string): Promise<Place[]> {
     // Check if this is a valid location from our CSV
     const locations = await this.getLocations();
+    const mappedCategory = this.normalizeCategory(category);
+    
+    console.log('Searching for:', {
+      category,
+      mappedCategory,
+      city: this.normalizeString(city),
+      state: state.toLowerCase()
+    });
+    
     const location = locations.find(
       loc => 
         this.normalizeString(loc.city) === this.normalizeString(city) && 
         loc.state_id.toLowerCase() === state.toLowerCase() &&
-        this.normalizeString(loc.category) === this.normalizeCategory(category)
+        this.normalizeString(loc.category) === this.normalizeString(mappedCategory)
     );
 
     if (!location) {
       console.log('Location not found:', {
         city: this.normalizeString(city),
         state: state.toLowerCase(),
-        category: this.normalizeCategory(category),
-        availableCategories: [...new Set(locations.map(l => this.normalizeString(l.category)))]
+        category: mappedCategory,
+        availableCategories: [...new Set(locations.map(l => l.category))]
       });
       throw new Error('Location not found in our directory');
     }
@@ -172,11 +224,9 @@ export class PlacesService {
     }
 
     // If not in cache, fetch from Google Places API
-    const mappedCategory = categoryMapping[category] || category;
-    const query = `${mappedCategory} in ${city}, ${state}`;
-    console.log('Fetching from Google Places API:', query);
+    console.log('Fetching from Google Places API for:', mappedCategory);
     const places = await this.searchGooglePlaces(
-      query,
+      mappedCategory,
       parseFloat(location.lat),
       parseFloat(location.lng)
     );
@@ -202,12 +252,13 @@ export class PlacesService {
       .slice(0, limit);
   }
 
-  static async getValidLocations(): Promise<{city: string, state: string, state_name: string}[]> {
+  static async getValidLocations(): Promise<{city: string, state: string, state_name: string, category: string}[]> {
     const locations = await this.getLocations();
     return locations.map(loc => ({
       city: loc.city,
       state: loc.state_id,
-      state_name: loc.state_name
+      state_name: loc.state_name,
+      category: loc.category
     }));
   }
 
