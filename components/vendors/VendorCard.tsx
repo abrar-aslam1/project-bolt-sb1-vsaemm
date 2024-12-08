@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 
 interface Vendor {
@@ -8,7 +7,6 @@ interface Vendor {
   description: string;
   location: string;
   rating: number;
-  image?: string;
 }
 
 interface VendorCardProps {
@@ -16,17 +14,12 @@ interface VendorCardProps {
 }
 
 export default function VendorCard({ vendor }: VendorCardProps) {
+  // Convert category to lowercase and handle spaces/special characters
+  const categorySlug = vendor.category.toLowerCase().replace(/\s+/g, '-');
+  
   return (
-    <Link href={`/vendors/${vendor.category}/${vendor.id}`}>
+    <Link href={`/vendors/${categorySlug}/${vendor.id}`}>
       <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow border border-gray-100 overflow-hidden">
-        <div className="relative h-48">
-          <Image
-            src={vendor.image || '/placeholder-venue.jpg'}
-            alt={vendor.name}
-            fill
-            className="object-cover"
-          />
-        </div>
         <div className="p-4">
           <h3 className="text-xl font-semibold mb-2">{vendor.name}</h3>
           <p className="text-gray-600 mb-2">{vendor.location}</p>

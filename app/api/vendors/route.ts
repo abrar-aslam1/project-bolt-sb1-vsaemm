@@ -7,6 +7,11 @@ if (!uri) {
   throw new Error('Please add your Mongo URI to .env.local');
 }
 
+// After the check, uri is definitely a string
+const mongoUri: string = uri;
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -17,7 +22,7 @@ export async function GET(request: Request) {
       return NextResponse.json([]);
     }
 
-    const client = new MongoClient(uri);
+    const client = new MongoClient(mongoUri);
     await client.connect();
 
     const db = client.db('wedding_vendors');
