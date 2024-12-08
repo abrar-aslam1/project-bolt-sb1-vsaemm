@@ -17,13 +17,27 @@ interface Location {
   category: string;
 }
 
+// Map URL slugs to CSV category names
+const categoryMapping: Record<string, string> = {
+  'wedding-venues': 'Wedding Venue',
+  'photographers': 'Wedding Photographer',
+  'caterers': 'Wedding Caterer',
+  'florists': 'Wedding Florist',
+  'djs': 'Wedding DJ',
+  'planners': 'Wedding Planner',
+  'dress-shops': 'Wedding Dress Shop',
+  'beauty': 'Wedding Makeup Artist'
+};
+
 export class PlacesService {
   private static normalizeString(str: string): string {
     return str.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   }
 
   private static normalizeCategory(category: string): string {
-    return this.normalizeString(category.replace(/-/g, ' '));
+    // First map the URL slug to the proper category name
+    const mappedCategory = categoryMapping[category] || category;
+    return this.normalizeString(mappedCategory);
   }
 
   private static async getLocations(): Promise<Location[]> {
@@ -141,6 +155,12 @@ export class PlacesService {
     );
 
     if (!location) {
+      console.log('Location not found:', {
+        city: this.normalizeString(city),
+        state: state.toLowerCase(),
+        category: this.normalizeCategory(category),
+        availableCategories: [...new Set(locations.map(l => this.normalizeString(l.category)))]
+      });
       throw new Error('Location not found in our directory');
     }
 
@@ -152,7 +172,8 @@ export class PlacesService {
     }
 
     // If not in cache, fetch from Google Places API
-    const query = `${category} in ${city}, ${state}`;
+    const mappedCategory = categoryMapping[category] || category;
+    const query = `${mappedCategory} in ${city}, ${state}`;
     console.log('Fetching from Google Places API:', query);
     const places = await this.searchGooglePlaces(
       query,

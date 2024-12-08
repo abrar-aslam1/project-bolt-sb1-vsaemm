@@ -25,6 +25,61 @@ const categoryDescriptions: Record<string, string> = {
   'beauty': 'Discover wedding makeup artists and beauty professionals who will help you look stunning on your big day.'
 };
 
+// Map state names to their IDs based on locations.csv
+const stateIds: Record<string, string> = {
+  'Alabama': 'AL',
+  'Alaska': 'AK',
+  'Arizona': 'AZ',
+  'Arkansas': 'AR',
+  'California': 'CA',
+  'Colorado': 'CO',
+  'Connecticut': 'CT',
+  'Delaware': 'DE',
+  'District of Columbia': 'DC',
+  'Florida': 'FL',
+  'Georgia': 'GA',
+  'Hawaii': 'HI',
+  'Idaho': 'ID',
+  'Illinois': 'IL',
+  'Indiana': 'IN',
+  'Iowa': 'IA',
+  'Kansas': 'KS',
+  'Kentucky': 'KY',
+  'Louisiana': 'LA',
+  'Maine': 'ME',
+  'Maryland': 'MD',
+  'Massachusetts': 'MA',
+  'Michigan': 'MI',
+  'Minnesota': 'MN',
+  'Mississippi': 'MS',
+  'Missouri': 'MO',
+  'Montana': 'MT',
+  'Nebraska': 'NE',
+  'Nevada': 'NV',
+  'New Hampshire': 'NH',
+  'New Jersey': 'NJ',
+  'New Mexico': 'NM',
+  'New York': 'NY',
+  'North Carolina': 'NC',
+  'North Dakota': 'ND',
+  'Ohio': 'OH',
+  'Oklahoma': 'OK',
+  'Oregon': 'OR',
+  'Pennsylvania': 'PA',
+  'Rhode Island': 'RI',
+  'South Carolina': 'SC',
+  'South Dakota': 'SD',
+  'Tennessee': 'TN',
+  'Texas': 'TX',
+  'Utah': 'UT',
+  'Vermont': 'VT',
+  'Virginia': 'VA',
+  'Washington': 'WA',
+  'West Virginia': 'WV',
+  'Wisconsin': 'WI',
+  'Wyoming': 'WY'
+};
+
 export async function generateMetadata({ 
   params 
 }: { 
@@ -104,39 +159,46 @@ export default function CategoryPage({ params }: { params: { category: string } 
       <div className="space-y-6 md:space-y-8">
         {Object.entries(citiesByState)
           .sort(([stateA], [stateB]) => stateA.localeCompare(stateB))
-          .map(([state, cities]) => (
-            <div key={state} className="bg-white rounded-lg shadow-md p-4 md:p-6">
-              <div className="flex items-center justify-between mb-6 border-b pb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{state}</h2>
-                  <p className="text-gray-600 text-sm mt-1">
-                    {cities.length} {cities.length === 1 ? 'city' : 'cities'} available
-                  </p>
+          .map(([state, cities]) => {
+            const stateId = stateIds[state];
+            if (!stateId) {
+              console.warn(`No state ID found for state: ${state}`);
+              return null;
+            }
+            return (
+              <div key={state} className="bg-white rounded-lg shadow-md p-4 md:p-6">
+                <div className="flex items-center justify-between mb-6 border-b pb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">{state}</h2>
+                    <p className="text-gray-600 text-sm mt-1">
+                      {cities.length} {cities.length === 1 ? 'city' : 'cities'} available
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  {cities.map((city) => {
+                    const citySlug = city.toLowerCase().replace(/\s+/g, '-');
+                    return (
+                      <Link
+                        key={city}
+                        href={`/top/${params.category}/${citySlug}/${stateId.toLowerCase()}`}
+                        className="group p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors duration-200"
+                      >
+                        <div>
+                          <h3 className="text-lg font-semibold mb-1 group-hover:text-blue-600 transition-colors">
+                            {city}
+                          </h3>
+                          <p className="text-sm text-gray-500 group-hover:text-blue-500 transition-colors">
+                            Find {title.toLowerCase()} in {city}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {cities.map((city: string) => {
-                  const citySlug = city.toLowerCase().replace(/\s+/g, '-');
-                  return (
-                    <Link
-                      key={city}
-                      href={`/vendors/${params.category}/${citySlug}`}
-                      className="group p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors duration-200"
-                    >
-                      <div>
-                        <h3 className="text-lg font-semibold mb-1 group-hover:text-blue-600 transition-colors">
-                          {city}
-                        </h3>
-                        <p className="text-sm text-gray-500 group-hover:text-blue-500 transition-colors">
-                          Find {title.toLowerCase()} in {city}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+            );
+          })}
       </div>
     </div>
   );
