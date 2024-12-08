@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { citiesByState } from '../../../lib/locations';
+import { citiesByState } from '@/lib/locations';
 
 const categoryTitles: Record<string, string> = {
   'wedding-venues': 'Wedding Venues',
@@ -117,7 +117,6 @@ export default function CategoryPage({ params }: { params: { category: string } 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {cities.map((city: string) => {
                   const citySlug = city.toLowerCase().replace(/\s+/g, '-');
-                  console.log('Rendering city:', city, 'with slug:', citySlug); // Debug log
                   return (
                     <Link
                       key={city}
