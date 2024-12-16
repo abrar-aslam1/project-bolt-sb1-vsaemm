@@ -3,7 +3,23 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
-import { citiesByState } from '../rapidapi-client';
+
+// Map of states to their full names
+const stateNames: Record<string, string> = {
+  'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
+  'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
+  'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho',
+  'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas',
+  'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+  'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+  'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+  'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+  'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma',
+  'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+  'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
+  'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
+  'WI': 'Wisconsin', 'WY': 'Wyoming'
+};
 
 function loadLocations() {
   try {
@@ -30,18 +46,9 @@ function loadLocations() {
   }
 }
 
-// Function to format location string to match citiesByState format
+// Function to format location string
 function formatLocation(city: string, state_id: string): string {
-  // Find the state name from citiesByState that contains this city
-  const stateName = Object.entries(citiesByState).find(([_, cities]) =>
-    cities.includes(city)
-  )?.[0];
-
-  if (!stateName) {
-    console.warn(`Warning: ${city} not found in citiesByState configuration`);
-    return `${city}, ${state_id}`;
-  }
-
+  const stateName = stateNames[state_id] || state_id;
   return `${city}, ${state_id}`;
 }
 

@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { PlacesService } from 'lib/services/places-service';
+import { PlacesService, categoryMapping } from 'lib/services/places-service';
+import { locationCoordinates } from 'lib/locations';
+
+const normalizeString = (str: string): string => {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').trim();
+};
 
 export async function POST(request: Request) {
   try {
@@ -13,23 +18,55 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('API Request:', { category, city, state });
+    // Normalize inputs
+    const normalizedCategory = normalizeString(category);
+    const normalizedCity = normalizeString(city);
+    const normalizedState = state.toLowerCase();
 
-    const places = await PlacesService.getTopPlaces(category, city, state);
+    console.log('API Request:', { 
+      category: normalizedCategory, 
+      city: normalizedCity, 
+      state: normalizedState 
+    });
+
+    // Validate category
+    if (!Object.keys(categoryMapping).includes(normalizedCategory)) {
+      console.error('Invalid category:', normalizedCategory);
+      return NextResponse.json(
+        { error: `Invalid category: ${category}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate city
+    if (!locationCoordinates[normalizedCity]) {
+      console.error('City not supported:', normalizedCity);
+      return NextResponse.json(
+        { error: `City not supported: ${city}` },
+        { status: 400 }
+      );
+    }
+
+    const places = await PlacesService.getTopPlaces(
+      normalizedCategory,
+      normalizedCity,
+      normalizedState
+    );
     
     console.log('API Response:', {
-      category,
-      city,
-      state,
+      category: normalizedCategory,
+      city: normalizedCity,
+      state: normalizedState,
       placesCount: places.length
     });
 
     return NextResponse.json({
       results: places,
       metadata: {
-        category,
-        city,
-        state,
+        category: normalizedCategory,
+        mappedCategory: categoryMapping[normalizedCategory],
+        city: normalizedCity,
+        state: normalizedState,
         count: places.length,
         timestamp: new Date().toISOString()
       }
@@ -37,7 +74,10 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'An error occurred' },
+      { 
+        error: error instanceof Error ? error.message : 'An error occurred',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
       { status: 500 }
     );
   }
@@ -58,23 +98,55 @@ export async function GET(request: Request) {
       );
     }
 
-    console.log('API Request:', { category, city, state });
+    // Normalize inputs
+    const normalizedCategory = normalizeString(category);
+    const normalizedCity = normalizeString(city);
+    const normalizedState = state.toLowerCase();
 
-    const places = await PlacesService.getTopPlaces(category, city, state);
+    console.log('API Request:', { 
+      category: normalizedCategory, 
+      city: normalizedCity, 
+      state: normalizedState 
+    });
+
+    // Validate category
+    if (!Object.keys(categoryMapping).includes(normalizedCategory)) {
+      console.error('Invalid category:', normalizedCategory);
+      return NextResponse.json(
+        { error: `Invalid category: ${category}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate city
+    if (!locationCoordinates[normalizedCity]) {
+      console.error('City not supported:', normalizedCity);
+      return NextResponse.json(
+        { error: `City not supported: ${city}` },
+        { status: 400 }
+      );
+    }
+
+    const places = await PlacesService.getTopPlaces(
+      normalizedCategory,
+      normalizedCity,
+      normalizedState
+    );
     
     console.log('API Response:', {
-      category,
-      city,
-      state,
+      category: normalizedCategory,
+      city: normalizedCity,
+      state: normalizedState,
       placesCount: places.length
     });
 
     return NextResponse.json({
       results: places,
       metadata: {
-        category,
-        city,
-        state,
+        category: normalizedCategory,
+        mappedCategory: categoryMapping[normalizedCategory],
+        city: normalizedCity,
+        state: normalizedState,
         count: places.length,
         timestamp: new Date().toISOString()
       }
@@ -82,7 +154,10 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'An error occurred' },
+      { 
+        error: error instanceof Error ? error.message : 'An error occurred',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
       { status: 500 }
     );
   }

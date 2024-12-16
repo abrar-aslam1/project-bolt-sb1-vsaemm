@@ -18,8 +18,8 @@ interface Location {
   category: string;
 }
 
-// Map URL slugs to CSV category names
-const categoryMapping: Record<string, string> = {
+// Map URL slugs to category names
+export const categoryMapping: Record<string, string> = {
   'venue': 'Wedding Venue',
   'venues': 'Wedding Venue',
   'wedding-venues': 'Wedding Venue',
@@ -66,16 +66,12 @@ export class PlacesService {
     return category.charAt(0).toUpperCase() + category.slice(1);
   }
 
-  private static async getLocations(): Promise<Location[]> {
-    const csvPath = path.join(process.cwd(), 'locations.csv');
-    const csvContent = readFileSync(csvPath, 'utf-8');
-    return parse(csvContent, {
-      columns: true,
-      skip_empty_lines: true
-    });
-  }
-
   private static async searchGooglePlaces(query: string, city: string, state: string): Promise<Place[]> {
+    if (!GOOGLE_API_KEY) {
+      console.error('GOOGLE_API_KEY is not set');
+      throw new Error('Google Places API key is not configured');
+    }
+
     const url = `https://places.googleapis.com/v1/places:searchText`;
     
     // Get coordinates for the city
@@ -92,65 +88,72 @@ export class PlacesService {
     // Format the query to be more specific for wedding services
     const formattedQuery = `${query} in ${city}, ${state}`;
     console.log('Google Places API Query:', formattedQuery);
+    console.log('Using coordinates:', { lat, lng, radius });
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_API_KEY!,
-        'X-Goog-FieldMask': [
-          'places.id',
-          'places.displayName',
-          'places.formattedAddress',
-          'places.rating',
-          'places.userRatingCount',
-          'places.priceLevel',
-          'places.websiteUri',
-          'places.location'
-        ].join(',')
-      },
-      body: JSON.stringify({
-        textQuery: formattedQuery,
-        locationBias: {
-          circle: {
-            center: {
-              latitude: lat,
-              longitude: lng
-            },
-            radius: radius * 1000 // Convert to meters
-          }
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': GOOGLE_API_KEY,
+          'X-Goog-FieldMask': [
+            'places.id',
+            'places.displayName',
+            'places.formattedAddress',
+            'places.rating',
+            'places.userRatingCount',
+            'places.priceLevel',
+            'places.websiteUri',
+            'places.location'
+          ].join(',')
         },
-        maxResultCount: 20,
-        languageCode: "en"
-      })
-    });
+        body: JSON.stringify({
+          textQuery: formattedQuery,
+          locationBias: {
+            circle: {
+              center: {
+                latitude: lat,
+                longitude: lng
+              },
+              radius: radius * 1000 // Convert to meters
+            }
+          },
+          maxResultCount: 20,
+          languageCode: "en"
+        })
+      });
 
-    if (!response.ok) {
-      console.error('Google Places API Error:', await response.text());
-      throw new Error('Failed to fetch from Google Places API');
-    }
-
-    const data = await response.json();
-    console.log('Google Places API Response:', JSON.stringify(data, null, 2));
-
-    if (!data.places || !Array.isArray(data.places)) {
-      console.error('No places found in response');
-      return [];
-    }
-
-    return data.places.map((place: any) => ({
-      placeId: place.id,
-      name: place.displayName.text,
-      address: place.formattedAddress,
-      rating: place.rating,
-      totalRatings: place.userRatingCount,
-      priceLevel: place.priceLevel,
-      website: place.websiteUri,
-      location: {
-        type: 'Point',
-        coordinates: [place.location.longitude, place.location.latitude]
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Google Places API Error Response:', errorText);
+        throw new Error(`Google Places API error: ${response.status} ${response.statusText}`);
       }
-    }));
+
+      const data = await response.json();
+      console.log('Google Places API Response:', JSON.stringify(data, null, 2));
+
+      if (!data.places || !Array.isArray(data.places)) {
+        console.error('No places found in response');
+        return [];
+      }
+
+      return data.places.map((place: any) => ({
+        placeId: place.id,
+        name: place.displayName.text,
+        address: place.formattedAddress,
+        rating: place.rating,
+        totalRatings: place.userRatingCount,
+        priceLevel: place.priceLevel,
+        website: place.websiteUri,
+        location: {
+          type: 'Point',
+          coordinates: [place.location.longitude, place.location.latitude]
+        }
+      }));
+    } catch (error) {
+      console.error('Error in searchGooglePlaces:', error);
+      throw error;
+    }
   }
 
   private static async getCachedResults(category: string, city: string, state: string): Promise<CachedSearch | null> {
@@ -220,40 +223,29 @@ export class PlacesService {
   }
 
   static async searchPlaces(category: string, city: string, state: string): Promise<Place[]> {
-    // Check if this is a valid location from our CSV
-    const locations = await this.getLocations();
     const mappedCategory = this.normalizeCategory(category);
+    const normalizedCity = this.normalizeString(city);
     
     console.log('Searching for:', {
       category,
       mappedCategory,
-      city: this.normalizeString(city),
+      city: normalizedCity,
       state: state.toLowerCase()
     });
     
-    // First check if the city exists in our supported locations
-    const cityLocation = locations.find(
-      loc => 
-        this.normalizeString(loc.city) === this.normalizeString(city) && 
-        loc.state_id.toLowerCase() === state.toLowerCase()
-    );
-
-    if (!cityLocation) {
-      console.log('City not found:', {
-        city: this.normalizeString(city),
-        state: state.toLowerCase()
-      });
-      throw new Error('City not found in our directory');
+    // Check if the city is supported
+    if (!locationCoordinates[normalizedCity]) {
+      console.log('City not supported:', normalizedCity);
+      throw new Error(`City ${city} is not currently supported`);
     }
 
     // Check if the category is valid
-    const validCategories = [...new Set(locations.map(l => l.category))];
-    if (!validCategories.includes(mappedCategory)) {
+    if (!Object.values(categoryMapping).includes(mappedCategory)) {
       console.log('Invalid category:', {
         category: mappedCategory,
-        availableCategories: validCategories
+        availableCategories: Object.values(categoryMapping)
       });
-      throw new Error('Invalid category');
+      throw new Error(`Category ${category} is not valid`);
     }
 
     try {
@@ -307,18 +299,21 @@ export class PlacesService {
   }
 
   static async getValidLocations(): Promise<{city: string, state: string, state_name: string, category: string}[]> {
-    const locations = await this.getLocations();
-    return locations.map(loc => ({
-      city: loc.city,
-      state: loc.state_id,
-      state_name: loc.state_name,
-      category: loc.category
-    }));
+    // Get all supported cities from locationCoordinates
+    const cities = Object.keys(locationCoordinates).map(cityKey => {
+      const [city, state] = cityKey.split('-');
+      return {
+        city: city.charAt(0).toUpperCase() + city.slice(1),
+        state: state ? state.toUpperCase() : '',
+        state_name: '', // Would need a mapping for full state names
+        category: '' // Categories are handled separately
+      };
+    });
+
+    return cities;
   }
 
   static async getValidCategories(): Promise<string[]> {
-    const locations = await this.getLocations();
-    const categories = new Set(locations.map(loc => loc.category));
-    return Array.from(categories);
+    return [...new Set(Object.values(categoryMapping))];
   }
 }
