@@ -25,9 +25,17 @@ interface Location {
   category: string;
 }
 
+const getBaseUrl = () => {
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return process.env.NODE_ENV === 'development' 
+    ? 'http://localhost:3000' 
+    : `https://${process.env.NEXT_PUBLIC_VERCEL_URL || 'localhost:3000'}`;
+};
+
 async function getPlaces(category: string, city: string, state: string): Promise<Place[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/places/top`, {
+    const baseUrl = getBaseUrl();
+    const response = await fetch(`${baseUrl}/api/places/top`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -50,7 +58,8 @@ async function getPlaces(category: string, city: string, state: string): Promise
 
 async function getValidLocations(city: string, state: string): Promise<Location[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/places`, {
+    const baseUrl = getBaseUrl();
+    const response = await fetch(`${baseUrl}/api/places`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
