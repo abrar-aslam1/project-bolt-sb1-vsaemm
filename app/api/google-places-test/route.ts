@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
 
-// Export Netlify Edge Function configuration
-export const config = {
-  runtime: 'edge',
-  regions: ['iad1'], // US East (N. Virginia)
-};
+export const runtime = "edge";
+export const preferredRegion = ["iad1"];
 
 export async function GET() {
   try {
@@ -12,18 +9,13 @@ export async function GET() {
     
     if (!GOOGLE_API_KEY) {
       console.error('GOOGLE_API_KEY not found in environment variables');
-      return new Response(JSON.stringify({
+      return NextResponse.json({
         error: 'Server configuration error - Google API key not found',
         envVars: {
           nodeEnv: process.env.NODE_ENV,
           hasGoogleKey: !!process.env.GOOGLE_API_KEY,
         }
-      }), {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      }, { status: 500 });
     }
 
     // Test the Google Places API with a simple query
@@ -48,50 +40,36 @@ export async function GET() {
         },
         maxResultCount: 1,
         languageCode: "en"
-      })
+      }),
+      cache: 'no-store'
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Google Places API Error:', errorText);
-      return new Response(JSON.stringify({
+      return NextResponse.json({
         error: 'Google Places API error',
         status: response.status,
         statusText: response.statusText,
         details: errorText,
         headers: Object.fromEntries(response.headers.entries())
-      }), {
-        status: response.status,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      }, { status: response.status });
     }
 
     const data = await response.json();
     console.log('Google Places API Response:', data);
     
-    return new Response(JSON.stringify({
+    return NextResponse.json({
       success: true,
       apiKeyLength: GOOGLE_API_KEY.length,
       apiKeyPrefix: GOOGLE_API_KEY.substring(0, 8) + '...',
       response: data
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
     });
   } catch (error) {
     console.error('Test API Error:', error);
-    return new Response(JSON.stringify({
+    return NextResponse.json({
       error: error instanceof Error ? error.message : 'An unknown error occurred',
       stack: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.stack : undefined : undefined
-    }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    }, { status: 500 });
   }
 }
