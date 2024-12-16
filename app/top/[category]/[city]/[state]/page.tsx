@@ -1,4 +1,3 @@
-import { PlacesService } from 'lib/services/places-service';
 import TopPlacesClient from './top-places-client';
 
 interface TopPlacesPageProps {
@@ -9,12 +8,65 @@ interface TopPlacesPageProps {
   }
 }
 
-async function getPlaces(category: string, city: string, state: string) {
+interface Place {
+  placeId: string;
+  name: string;
+  address: string;
+  rating?: number;
+  totalRatings?: number;
+  priceLevel?: string;
+  website?: string;
+}
+
+interface Location {
+  city: string;
+  state: string;
+  state_name: string;
+  category: string;
+}
+
+async function getPlaces(category: string, city: string, state: string): Promise<Place[]> {
   try {
-    const places = await PlacesService.getTopPlaces(category, city, state);
-    return places;
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/places/top`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ category, city, state }),
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch places');
+    }
+
+    const data = await response.json();
+    return data.results || [];
   } catch (error) {
     console.error('Error fetching places:', error);
+    return [];
+  }
+}
+
+async function getValidLocations(city: string, state: string): Promise<Location[]> {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/places`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ city, state }),
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch locations');
+    }
+
+    const data = await response.json();
+    return data.locations || [];
+  } catch (error) {
+    console.error('Error fetching locations:', error);
     return [];
   }
 }
@@ -26,9 +78,9 @@ export default async function TopPlacesPage({ params }: TopPlacesPageProps) {
     
     if (places.length === 0) {
       // Get available categories for this city
-      const locations = await PlacesService.getValidLocations();
+      const locations = await getValidLocations(city, state);
       const cityLocations = locations.filter(
-        loc => loc.city.toLowerCase() === city.toLowerCase() && 
+        (loc: Location) => loc.city.toLowerCase() === city.toLowerCase() && 
                loc.state.toLowerCase() === state.toLowerCase()
       );
 
@@ -51,7 +103,7 @@ export default async function TopPlacesPage({ params }: TopPlacesPageProps) {
                   Available Categories in {city}:
                 </h2>
                 <ul className="list-disc pl-5 mb-6">
-                  {cityLocations.map((loc, index) => (
+                  {cityLocations.map((loc: Location, index: number) => (
                     <li key={index} className="mb-2">
                       <a 
                         href={`/top/${loc.category.toLowerCase().replace(/wedding\s+/i, '').replace(/\s+/g, '-')}/${city.toLowerCase()}/${state.toLowerCase()}`}
