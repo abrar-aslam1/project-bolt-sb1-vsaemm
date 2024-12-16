@@ -1,4 +1,5 @@
 import TopPlacesClient from './top-places-client';
+import { headers } from 'next/headers';
 
 interface TopPlacesPageProps {
   params: {
@@ -25,16 +26,13 @@ interface Location {
   category: string;
 }
 
-const getBaseUrl = () => {
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:3000' 
-    : `https://${process.env.NEXT_PUBLIC_VERCEL_URL || 'localhost:3000'}`;
-};
-
 async function getPlaces(category: string, city: string, state: string): Promise<Place[]> {
   try {
-    const baseUrl = getBaseUrl();
+    const headersList = headers();
+    const protocol = headersList.get('x-forwarded-proto') || 'http';
+    const host = headersList.get('host') || '';
+    const baseUrl = `${protocol}://${host}`;
+
     const response = await fetch(`${baseUrl}/api/places/top`, {
       method: 'POST',
       headers: {
@@ -45,7 +43,9 @@ async function getPlaces(category: string, city: string, state: string): Promise
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch places');
+      const errorText = await response.text();
+      console.error('Places API error:', errorText);
+      throw new Error(`Failed to fetch places: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -58,7 +58,11 @@ async function getPlaces(category: string, city: string, state: string): Promise
 
 async function getValidLocations(city: string, state: string): Promise<Location[]> {
   try {
-    const baseUrl = getBaseUrl();
+    const headersList = headers();
+    const protocol = headersList.get('x-forwarded-proto') || 'http';
+    const host = headersList.get('host') || '';
+    const baseUrl = `${protocol}://${host}`;
+
     const response = await fetch(`${baseUrl}/api/places`, {
       method: 'POST',
       headers: {
@@ -69,7 +73,9 @@ async function getValidLocations(city: string, state: string): Promise<Location[
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch locations');
+      const errorText = await response.text();
+      console.error('Locations API error:', errorText);
+      throw new Error(`Failed to fetch locations: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -83,15 +89,22 @@ async function getValidLocations(city: string, state: string): Promise<Location[
 export default async function TopPlacesPage({ params }: TopPlacesPageProps) {
   try {
     const { category, city, state } = params;
+    console.log('Fetching places for:', { category, city, state });
+    
     const places = await getPlaces(category, city, state);
+    console.log('Places fetched:', places.length);
     
     if (places.length === 0) {
       // Get available categories for this city
+      console.log('No places found, fetching valid locations');
       const locations = await getValidLocations(city, state);
+      console.log('Locations fetched:', locations.length);
+      
       const cityLocations = locations.filter(
         (loc: Location) => loc.city.toLowerCase() === city.toLowerCase() && 
                loc.state.toLowerCase() === state.toLowerCase()
       );
+      console.log('City locations filtered:', cityLocations.length);
 
       const formattedCategory = category.split('-').map(word => 
         word.charAt(0).toUpperCase() + word.slice(1)
@@ -145,6 +158,11 @@ export default async function TopPlacesPage({ params }: TopPlacesPageProps) {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12 text-red-600">
           Error: Unable to load venues. Please try again later.
+          {process.env.NODE_ENV === 'development' && (
+            <pre className="mt-4 text-left text-sm bg-gray-100 p-4 rounded">
+              {error instanceof Error ? error.message : 'Unknown error'}
+            </pre>
+          )}
         </div>
       </div>
     );
