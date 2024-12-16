@@ -3,6 +3,7 @@ import { parse } from 'csv-parse/sync';
 import path from 'path';
 import clientPromise from '../mongodb';
 import { Place, CachedSearch } from '../models/place';
+import { locationCoordinates } from '../locations';
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
@@ -46,7 +47,7 @@ const categoryMapping: Record<string, string> = {
 
 export class PlacesService {
   private static normalizeString(str: string): string {
-    return str.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').trim();
   }
 
   private static normalizeCategory(category: string): string {
@@ -74,11 +75,22 @@ export class PlacesService {
     });
   }
 
-  private static async searchGooglePlaces(query: string, lat: number, lng: number): Promise<Place[]> {
+  private static async searchGooglePlaces(query: string, city: string, state: string): Promise<Place[]> {
     const url = `https://places.googleapis.com/v1/places:searchText`;
     
+    // Get coordinates for the city
+    const cityKey = this.normalizeString(`${city}`);
+    const coordinates = locationCoordinates[cityKey];
+    
+    if (!coordinates) {
+      console.error('No coordinates found for city:', city);
+      throw new Error(`Location coordinates not found for ${city}`);
+    }
+
+    const [lat, lng, radius] = coordinates.split(',').map(Number);
+    
     // Format the query to be more specific for wedding services
-    const formattedQuery = `${query} wedding services`;
+    const formattedQuery = `${query} in ${city}, ${state}`;
     console.log('Google Places API Query:', formattedQuery);
 
     const response = await fetch(url, {
@@ -105,7 +117,7 @@ export class PlacesService {
               latitude: lat,
               longitude: lng
             },
-            radius: 20000.0 // 20km radius
+            radius: radius * 1000 // Convert to meters
           }
         },
         maxResultCount: 20,
@@ -137,54 +149,74 @@ export class PlacesService {
       location: {
         type: 'Point',
         coordinates: [place.location.longitude, place.location.latitude]
-      },
-      cached: new Date()
+      }
     }));
   }
 
   private static async getCachedResults(category: string, city: string, state: string): Promise<CachedSearch | null> {
-    const client = await clientPromise;
-    const db = client.db('wedding_directory');
-    const collection = db.collection('cached_searches');
+    try {
+      const client = await clientPromise;
+      const db = client.db('wedding_directory');
+      const collection = db.collection('cached_searches');
 
-    return await collection.findOne({
-      category: this.normalizeCategory(category),
-      city: this.normalizeString(city),
-      state: state.toLowerCase(),
-      lastUpdated: { $gt: new Date(Date.now() - CACHE_DURATION) }
-    }) as CachedSearch | null;
+      const result = await collection.findOne({
+        category: this.normalizeCategory(category),
+        city: this.normalizeString(city),
+        state: state.toLowerCase(),
+        lastUpdated: { $gt: new Date(Date.now() - CACHE_DURATION) }
+      });
+
+      if (result) {
+        // Remove MongoDB-specific fields
+        const { _id, ...rest } = result;
+        return rest as CachedSearch;
+      }
+    } catch (error) {
+      console.error('Failed to get cached results:', error);
+      // Return null to proceed with fresh search
+    }
+
+    return null;
   }
 
   private static async cacheResults(places: Place[], category: string, city: string, state: string) {
-    const client = await clientPromise;
-    const db = client.db('wedding_directory');
-    const collection = db.collection('cached_searches');
-    const placesCollection = db.collection('places');
+    try {
+      const client = await clientPromise;
+      const db = client.db('wedding_directory');
+      const collection = db.collection('cached_searches');
+      const placesCollection = db.collection('places');
 
-    // Insert individual places
-    if (places.length > 0) {
-      await placesCollection.insertMany(places, { ordered: false }).catch(err => {
-        console.log('Some places already exist in the database');
-      });
+      // Insert individual places
+      if (places.length > 0) {
+        await placesCollection.insertMany(
+          places.map(place => ({ ...place, cached: new Date() })),
+          { ordered: false }
+        ).catch(err => {
+          console.log('Some places already exist in the database');
+        });
+      }
+
+      // Cache the search results
+      await collection.updateOne(
+        {
+          category: this.normalizeCategory(category),
+          city: this.normalizeString(city),
+          state: state.toLowerCase()
+        },
+        {
+          $set: {
+            query: `${category} in ${city}, ${state}`,
+            results: places,
+            lastUpdated: new Date(),
+            totalResults: places.length
+          }
+        },
+        { upsert: true }
+      );
+    } catch (error) {
+      console.error('Failed to cache results:', error);
+      // Continue without caching
     }
-
-    // Cache the search results
-    await collection.updateOne(
-      {
-        category: this.normalizeCategory(category),
-        city: this.normalizeString(city),
-        state: state.toLowerCase()
-      },
-      {
-        $set: {
-          query: `${category} in ${city}, ${state}`,
-          results: places,
-          lastUpdated: new Date(),
-          totalResults: places.length
-        }
-      },
-      { upsert: true }
-    );
   }
 
   static async searchPlaces(category: string, city: string, state: string): Promise<Place[]> {
@@ -199,41 +231,63 @@ export class PlacesService {
       state: state.toLowerCase()
     });
     
-    const location = locations.find(
+    // First check if the city exists in our supported locations
+    const cityLocation = locations.find(
       loc => 
         this.normalizeString(loc.city) === this.normalizeString(city) && 
-        loc.state_id.toLowerCase() === state.toLowerCase() &&
-        this.normalizeString(loc.category) === this.normalizeString(mappedCategory)
+        loc.state_id.toLowerCase() === state.toLowerCase()
     );
 
-    if (!location) {
-      console.log('Location not found:', {
+    if (!cityLocation) {
+      console.log('City not found:', {
         city: this.normalizeString(city),
-        state: state.toLowerCase(),
-        category: mappedCategory,
-        availableCategories: [...new Set(locations.map(l => l.category))]
+        state: state.toLowerCase()
       });
-      throw new Error('Location not found in our directory');
+      throw new Error('City not found in our directory');
     }
 
-    // Check cache first
-    const cachedResults = await this.getCachedResults(category, city, state);
-    if (cachedResults) {
-      console.log('Returning cached results');
-      return cachedResults.results;
+    // Check if the category is valid
+    const validCategories = [...new Set(locations.map(l => l.category))];
+    if (!validCategories.includes(mappedCategory)) {
+      console.log('Invalid category:', {
+        category: mappedCategory,
+        availableCategories: validCategories
+      });
+      throw new Error('Invalid category');
     }
 
-    // If not in cache, fetch from Google Places API
+    try {
+      // Check cache first
+      const cachedResults = await this.getCachedResults(category, city, state);
+      if (cachedResults) {
+        console.log('Returning cached results');
+        return cachedResults.results.map(place => {
+          // Remove MongoDB-specific fields
+          const { _id, ...rest } = place as any;
+          return rest;
+        });
+      }
+    } catch (error) {
+      console.error('Cache lookup failed:', error);
+      // Continue with fresh search
+    }
+
+    // If not in cache or cache failed, fetch from Google Places API
     console.log('Fetching from Google Places API for:', mappedCategory);
     const places = await this.searchGooglePlaces(
       mappedCategory,
-      parseFloat(location.lat),
-      parseFloat(location.lng)
+      city,
+      state
     );
 
-    // Cache the results
-    console.log('Caching results');
-    await this.cacheResults(places, category, city, state);
+    // Try to cache the results, but don't fail if caching fails
+    try {
+      console.log('Caching results');
+      await this.cacheResults(places, category, city, state);
+    } catch (error) {
+      console.error('Failed to cache results:', error);
+      // Continue without caching
+    }
 
     return places;
   }

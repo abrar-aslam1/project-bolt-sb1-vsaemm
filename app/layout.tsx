@@ -1,28 +1,27 @@
-import './globals.css';
-import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { Toaster } from '@/components/ui/toaster';
 import MainNav from '@/components/main-nav';
+import { SiteFooter } from '@/components/site-footer';
 import { CookieConsent } from '@/components/cookie-consent';
+import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
-export const metadata: Metadata = {
-  title: 'WeddingVendors - Find Local Wedding Professionals',
-  description: 'Connect with exceptional wedding professionals to create unforgettable celebrations of love.',
+export const metadata = {
+  title: {
+    default: 'Wedding Vendors Directory | Find Local Wedding Services',
+    template: '%s | Wedding Vendors Directory'
+  },
+  description: 'Find and connect with the best local wedding vendors for your special day. Browse venues, photographers, caterers, and more.',
+  keywords: ['wedding vendors', 'wedding venues', 'wedding photographers', 'wedding planning'],
+  authors: [{ name: 'Wedding Vendors Directory' }],
+  creator: 'Wedding Vendors Directory',
   icons: {
     icon: [
-      {
-        url: '/favicon.ico',
-        sizes: 'any',
-      },
-    ],
-    apple: [
-      {
-        url: '/apple-touch-icon.png',
-        sizes: '180x180',
-      },
-    ],
-  },
+      { url: 'https://cdn-icons-png.flaticon.com/32/2740/2740624.png', sizes: '32x32', type: 'image/png' },
+      { url: 'https://cdn-icons-png.flaticon.com/16/2740/2740624.png', sizes: '16x16', type: 'image/png' }
+    ]
+  }
 };
 
 export default function RootLayout({
@@ -33,23 +32,29 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="manifest" href="/site.webmanifest" />
+        <link 
+          rel="icon" 
+          type="image/png" 
+          sizes="32x32" 
+          href="https://cdn-icons-png.flaticon.com/32/2740/2740624.png" 
+        />
+        <link 
+          rel="icon" 
+          type="image/png" 
+          sizes="16x16" 
+          href="https://cdn-icons-png.flaticon.com/16/2740/2740624.png" 
+        />
       </head>
       <body className={inter.className}>
-        <MainNav />
-        <main className="pt-16">{children}</main>
-        <CookieConsent />
-        <footer className="bg-white border-t mt-16">
-          <div className="container mx-auto px-4 py-8">
-            <div className="text-center text-gray-600">
-              <p>© {new Date().getFullYear()} WeddingVendors. All rights reserved.</p>
-            </div>
+        <div className="relative flex min-h-screen flex-col">
+          <MainNav />
+          <div className="flex-1">
+            {children}
           </div>
-        </footer>
+          <SiteFooter />
+        </div>
+        <Toaster />
+        <CookieConsent />
       </body>
     </html>
   );
