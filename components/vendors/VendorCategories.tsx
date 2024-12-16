@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 const categories = [
   {
-    id: 'venues',
+    id: 'wedding-venues',
     name: 'Venues',
     description: 'Wedding venues and reception locations',
     icon: '🏰'
@@ -14,7 +14,7 @@ const categories = [
     icon: '📸'
   },
   {
-    id: 'catering',
+    id: 'caterers',
     name: 'Catering',
     description: 'Wedding catering and food services',
     icon: '🍽️'
@@ -26,7 +26,7 @@ const categories = [
     icon: '💐'
   },
   {
-    id: 'music',
+    id: 'djs',
     name: 'Music',
     description: 'DJs, bands, and entertainment',
     icon: '🎵'
