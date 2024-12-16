@@ -1,4 +1,4 @@
-// Cities and states that are supported by the DataForSEO API
+// Cities and states that are supported by the Google Places API
 export const citiesByState: Record<string, string[]> = {
   'California': ['Los Angeles', 'San Francisco', 'San Diego', 'Sacramento', 'San Jose'],
   'New York': ['New York', 'Buffalo', 'Rochester', 'Albany'],
@@ -17,7 +17,7 @@ export const citiesByState: Record<string, string[]> = {
   'Colorado': ['Denver']
 };
 
-// Location coordinates for DataForSEO API
+// Location coordinates for Google Places API
 // Format: "latitude,longitude,radius"
 export const locationCoordinates: Record<string, string> = {
   // Arizona

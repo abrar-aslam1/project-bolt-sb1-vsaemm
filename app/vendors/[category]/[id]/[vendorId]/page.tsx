@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { searchBusinesses } from '@/lib/dataforseo-client';
+import { PlacesService } from 'lib/services/places-service';
 import { VendorImage } from '../vendor-image';
 
 interface VendorDetails {
@@ -10,36 +10,14 @@ interface VendorDetails {
   address: string;
   phone_number?: string;
   website?: string;
-  rating?: {
-    value: number;
-    votes_count: number;
-  };
+  rating?: number;
+  totalRatings?: number;
   latitude: number;
   longitude: number;
   photos?: string[];
-  business_id: string;
+  placeId: string;
   description?: string;
-  hours?: {
-    timetable: Record<string, Array<{
-      open: { hour: number; minute: number };
-      close: { hour: number; minute: number };
-    }>>;
-    current_status: string;
-  };
-  attributes?: {
-    available_attributes?: Record<string, string[]>;
-    unavailable_attributes?: Record<string, string[]>;
-  };
-  price_level?: string;
-  is_claimed?: boolean;
-  address_info?: {
-    borough?: string;
-    address: string;
-    city: string;
-    zip: string;
-    region: string;
-    country_code: string;
-  };
+  priceLevel?: string;
 }
 
 const categoryMap: Record<string, string> = {
@@ -103,22 +81,31 @@ async function getVendorDetails(category: string, citySlug: string, vendorId: st
   const city = formatCityName(citySlug);
   
   try {
-    const data = await searchBusinesses({
-      keyword: categoryMap[category],
-      locationName: city
-    });
+    const places = await PlacesService.searchPlaces(category, city, 'us');
 
-    if (!data || !data.data) {
+    if (!places || places.length === 0) {
       return null;
     }
 
-    const vendor = data.data.find(business => business.business_id === vendorId);
+    const vendor = places.find(place => place.placeId === vendorId);
     
     if (!vendor) {
       return null;
     }
 
-    return vendor;
+    return {
+      name: vendor.name,
+      category: categoryMap[category],
+      address: vendor.address,
+      website: vendor.website,
+      rating: vendor.rating,
+      totalRatings: vendor.totalRatings,
+      latitude: vendor.location.coordinates[1],
+      longitude: vendor.location.coordinates[0],
+      placeId: vendor.placeId,
+      priceLevel: vendor.priceLevel,
+      description: `${vendor.name} is a ${categoryMap[category]} located in ${city}.`
+    };
   } catch (error) {
     console.error('Error fetching vendor details:', error);
     return null;
@@ -170,8 +157,8 @@ export default async function VendorDetailsPage({
               {vendor.rating && (
                 <div className="flex items-center mb-4">
                   <span className="text-yellow-400 text-2xl mr-2">★</span>
-                  <span className="text-xl">{vendor.rating.value.toFixed(1)}</span>
-                  <span className="text-gray-500 ml-2">({vendor.rating.votes_count} reviews)</span>
+                  <span className="text-xl">{vendor.rating.toFixed(1)}</span>
+                  <span className="text-gray-500 ml-2">({vendor.totalRatings} reviews)</span>
                 </div>
               )}
             </div>
@@ -199,65 +186,21 @@ export default async function VendorDetailsPage({
 
           <div className="border-t border-gray-200 mt-6 pt-6">
             <h2 className="text-2xl font-semibold mb-4">About</h2>
-            <p className="text-gray-600 mb-6">{vendor.description || `${vendor.name} is a ${vendor.category} located in ${cityName}.`}</p>
+            <p className="text-gray-600 mb-6">{vendor.description}</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
                 <h3 className="text-xl font-semibold mb-3">Location</h3>
                 <p className="text-gray-600">{vendor.address}</p>
-                {vendor.address_info && (
-                  <p className="text-gray-600 mt-2">
-                    {[
-                      vendor.address_info.city,
-                      vendor.address_info.region,
-                      vendor.address_info.zip
-                    ].filter(Boolean).join(', ')}
-                  </p>
-                )}
               </div>
               
-              {vendor.hours?.timetable && Object.keys(vendor.hours.timetable).length > 0 && (
+              {vendor.priceLevel && (
                 <div>
-                  <h3 className="text-xl font-semibold mb-3">Business Hours</h3>
-                  <div className="space-y-2">
-                    {Object.entries(vendor.hours.timetable).map(([day, slots]) => (
-                      <div key={day} className="flex justify-between">
-                        <span className="font-medium capitalize">{day}</span>
-                        <span className="text-gray-600">
-                          {slots.map((slot, index) => (
-                            <span key={index}>
-                              {`${slot.open.hour}:${slot.open.minute.toString().padStart(2, '0')} - `}
-                              {`${slot.close.hour}:${slot.close.minute.toString().padStart(2, '0')}`}
-                            </span>
-                          ))}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                  <h3 className="text-xl font-semibold mb-3">Price Level</h3>
+                  <p className="text-gray-600">{'$'.repeat(vendor.priceLevel.length)}</p>
                 </div>
               )}
             </div>
-
-            {vendor.attributes?.available_attributes && 
-             Object.keys(vendor.attributes.available_attributes).length > 0 && (
-              <div className="mt-8">
-                <h3 className="text-xl font-semibold mb-4">Features & Amenities</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Object.entries(vendor.attributes.available_attributes).map(([category, items]) => (
-                    <div key={category} className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="font-medium mb-2 capitalize">{category.replace(/_/g, ' ')}</h4>
-                      <ul className="space-y-1">
-                        {items.map((item, index) => (
-                          <li key={index} className="text-gray-600 text-sm">
-                            • {item.replace(/_/g, ' ')}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
