@@ -29,9 +29,9 @@ export function SiteFooter() {
               <ul className="space-y-3 text-sm">
                 {[
                   { href: '/vendors', label: 'Find Vendors' },
-                  { href: '/ideas', label: 'Wedding Ideas' },
-                  { href: '/tools', label: 'Planning Tools' },
-                  { href: '/blog', label: 'Wedding Blog' }
+                  { href: '/locations', label: 'Browse Locations' },
+                  { href: '/contact', label: 'Contact Us' },
+                  { href: '/get-started', label: 'Get Started' }
                 ].map(({ href, label }) => (
                   <li key={href}>
                     <Link 
