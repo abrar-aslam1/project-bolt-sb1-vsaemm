@@ -9,7 +9,20 @@
 
 [functions]
   node_bundler = "esbuild"
+  directory = "netlify/functions"
 
 [build.environment]
   NEXT_USE_NETLIFY_EDGE = "true"
   NEXT_PUBLIC_API_URL = "https://findmyweddingvendor.com"
+  NODE_ENV = "production"
+
+[dev]
+  command = "npm run dev"
+  targetPort = 3000
+  port = 8888
+  publish = ".next"
+  framework = "#custom"
+  autoLaunch = true
+
+# Note: Sensitive environment variables like MONGODB_URI and GOOGLE_API_KEY
+# should be set in the Netlify dashboard under Site settings > Build & deploy > Environment variables
