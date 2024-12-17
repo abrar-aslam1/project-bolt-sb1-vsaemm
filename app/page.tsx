@@ -34,15 +34,7 @@ export default function HomePage({
         <p className="text-xl text-gray-600 mb-8">
           Discover and connect with the best wedding professionals in your area
         </p>
-        <div className="max-w-2xl mx-auto">
-          <SearchBar placeholder="Search for vendors, categories, or locations..." />
-        </div>
       </div>
-
-      <section className="mb-16">
-        <h2 className="text-3xl font-bold mb-8 text-center">Browse by Category</h2>
-        <VendorCategories />
-      </section>
 
       <section className="bg-pink-50 rounded-lg p-6 md:p-8 mb-16">
         <div className="max-w-3xl mx-auto text-center">
@@ -67,11 +59,14 @@ export default function HomePage({
       <section className="text-center">
         <h2 className="text-2xl md:text-3xl font-bold mb-6">Ready to Start Planning?</h2>
         <p className="text-xl text-gray-600 mb-8">
-          Browse our categories above to find your perfect wedding vendors
+          Browse our categories to find your perfect wedding vendors
         </p>
-        <button className="bg-pink-500 text-white px-8 py-3 rounded-lg hover:bg-pink-600 transition-colors">
+        <a 
+          href="/get-started"
+          className="inline-block bg-pink-500 text-white px-8 py-3 rounded-lg hover:bg-pink-600 transition-colors"
+        >
           Get Started
-        </button>
+        </a>
       </section>
     </main>
   );

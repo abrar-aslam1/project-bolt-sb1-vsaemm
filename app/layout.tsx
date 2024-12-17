@@ -1,8 +1,5 @@
 import { Inter } from 'next/font/google';
-import { Toaster } from '@/components/ui/toaster';
 import MainNav from '@/components/main-nav';
-import { SiteFooter } from '@/components/site-footer';
-import { CookieConsent } from '@/components/cookie-consent';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -51,10 +48,7 @@ export default function RootLayout({
           <div className="flex-1">
             {children}
           </div>
-          <SiteFooter />
         </div>
-        <Toaster />
-        <CookieConsent />
       </body>
     </html>
   );
