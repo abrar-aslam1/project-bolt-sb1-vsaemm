@@ -25,6 +25,21 @@ interface TopPlacesClientProps {
 }
 
 export default function TopPlacesClient({ initialPlaces, params }: TopPlacesClientProps) {
+  if (!params || !params.category || !params.city || !params.state) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-bold mb-4">
+            Error Loading Content
+          </h1>
+          <p className="text-gray-700">
+            Invalid parameters provided.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const { category, city, state } = params;
   const formattedCategory = category.split('-').map(word => 
     word.charAt(0).toUpperCase() + word.slice(1)

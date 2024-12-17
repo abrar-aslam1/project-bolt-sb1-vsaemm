@@ -17,12 +17,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const places = await PlacesService.searchPlaces(category, city, state);
+    console.log('Fetching top places for:', { category, city, state });
+    const places = await PlacesService.getTopPlaces(category, city, state);
+    console.log('Found places:', places.length);
+    
     return NextResponse.json({ results: places });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in top places API:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch top places' },
+      { error: error.message || 'Failed to fetch top places' },
       { status: 500 }
     );
   }

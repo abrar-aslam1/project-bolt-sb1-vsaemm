@@ -35,17 +35,46 @@ async function getPlaces(category: string, city: string, state: string) {
   }
 }
 
-export default function Page() {
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="text-center py-12">
-        <h1 className="text-2xl font-bold mb-4">
-          Loading...
-        </h1>
-        <p className="text-gray-700">
-          Please wait while we fetch the content.
-        </p>
+interface PageProps {
+  params: {
+    category: string;
+    city: string;
+    state: string;
+  };
+}
+
+export default async function Page({ params }: PageProps) {
+  // Create a Promise that resolves with the params to handle them asynchronously
+  const resolvedParams = await Promise.resolve(params);
+
+  try {
+    // Validate params
+    if (!resolvedParams?.category || !resolvedParams?.city || !resolvedParams?.state) {
+      throw new Error('Missing required parameters');
+    }
+
+    // Fetch the places data
+    const places = await getPlaces(
+      resolvedParams.category,
+      resolvedParams.city,
+      resolvedParams.state
+    );
+
+    // Pass both the places data and the params to the client component
+    return <TopPlacesClient initialPlaces={places} params={resolvedParams} />;
+  } catch (error) {
+    console.error('Error in page:', error);
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <h1 className="text-2xl font-bold mb-4">
+            Error Loading Content
+          </h1>
+          <p className="text-gray-700">
+            {error instanceof Error ? error.message : 'An error occurred while loading the content. Please try again later.'}
+          </p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 }
