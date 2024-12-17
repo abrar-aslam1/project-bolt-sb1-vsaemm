@@ -1,33 +1,67 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import VendorCard from './VendorCard';
+import { parseSearchQuery, normalizeString, getBaseUrl } from '@/lib/utils';
 
-interface Vendor {
-  id: string;
+interface Place {
+  placeId: string;
   name: string;
-  category: string;
-  description: string;
-  location: string;
+  address: string;
   rating: number;
-  image?: string;
+  totalRatings: number;
+  priceLevel?: string;
+  website?: string;
+  location: {
+    type: string;
+    coordinates: [number, number];
+  };
 }
 
-export default function VendorList({ query }: { query: string }) {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
+interface VendorListProps {
+  query: string;
+}
+
+export default function VendorList({ query }: VendorListProps) {
+  const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchVendors = async () => {
+    const fetchPlaces = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/vendors?q=${encodeURIComponent(query)}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch vendors');
+        const parsed = parseSearchQuery(query);
+
+        // If we have a category and location, redirect to the category page
+        if (parsed.category && parsed.city && parsed.state) {
+          router.push(
+            `/top/${normalizeString(parsed.category)}/${normalizeString(parsed.city)}/${normalizeString(parsed.state)}`
+          );
+          return;
         }
+
+        // Otherwise, search using the places API
+        const searchParams = new URLSearchParams();
+        if (parsed.category) searchParams.set('category', parsed.category);
+        if (parsed.city) searchParams.set('city', parsed.city);
+        if (parsed.state) searchParams.set('state', parsed.state);
+        if (!parsed.category && !parsed.city && !parsed.state) {
+          searchParams.set('q', query); // Use raw query if no structured data found
+        }
+
+        const response = await fetch(
+          `${getBaseUrl()}/.netlify/functions/api/places-search?${searchParams.toString()}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch places');
+        }
+
         const data = await response.json();
-        setVendors(data);
+        setPlaces(data.results || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -36,9 +70,9 @@ export default function VendorList({ query }: { query: string }) {
     };
 
     if (query) {
-      fetchVendors();
+      fetchPlaces();
     }
-  }, [query]);
+  }, [query, router]);
 
   if (loading) {
     return (
@@ -54,24 +88,39 @@ export default function VendorList({ query }: { query: string }) {
     return (
       <div className="text-center py-8">
         <p className="text-red-500">{error}</p>
-        <p className="mt-4 text-gray-600">Please try again later or contact support if the problem persists.</p>
+        <p className="mt-4 text-gray-600">
+          Please try again later or contact support if the problem persists.
+        </p>
       </div>
     );
   }
 
-  if (vendors.length === 0) {
+  if (places.length === 0) {
     return (
       <div className="text-center py-8">
         <p className="text-xl text-gray-600">No results found for your search.</p>
-        <p className="mt-4">Try different keywords or browse our categories below.</p>
+        <p className="mt-4">
+          Try searching by category (e.g., "venues") and location (e.g., "New York")
+        </p>
       </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {vendors.map((vendor) => (
-        <VendorCard key={vendor.id} vendor={vendor} />
+      {places.map((place) => (
+        <VendorCard
+          key={place.placeId}
+          vendor={{
+            id: place.placeId,
+            name: place.name,
+            location: place.address,
+            rating: place.rating,
+            description: `${place.totalRatings} reviews${place.priceLevel ? ` • ${place.priceLevel}` : ''}`,
+            website: place.website,
+            image: '/placeholder-venue.jpg'
+          }}
+        />
       ))}
     </div>
   );
