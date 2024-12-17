@@ -1,119 +1,16 @@
-import { MongoClient, ObjectId } from 'mongodb';
-import { notFound } from 'next/navigation';
-import { Metadata } from 'next';
+import { MongoClient } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 
-interface VendorPageProps {
-  params: {
-    category: string;
-    id: string;
-  };
-  searchParams?: { [key: string]: string | string[] | undefined };
-}
-
-interface Vendor {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  location: string;
-  rating: number;
-}
-
-async function getVendor(category: string, id: string): Promise<Vendor | null> {
-  const client = await clientPromise;
-  try {
-    const db = client.db('wedding_vendors');
-    const vendor = await db.collection('vendors').findOne({
-      _id: new ObjectId(id),
-      category: category
-    });
-
-    if (!vendor) {
-      return null;
-    }
-
-    return {
-      id: vendor._id.toString(),
-      name: vendor.name,
-      category: vendor.category,
-      description: vendor.description,
-      location: vendor.location,
-      rating: vendor.rating
-    };
-  } catch (error) {
-    console.error('Error fetching vendor:', error);
-    return null;
-  }
-}
-
-export async function generateMetadata({ 
-  params 
-}: VendorPageProps): Promise<Metadata> {
-  const vendor = await getVendor(params.category, params.id);
-  
-  if (!vendor) {
-    return {
-      title: 'Vendor Not Found',
-      description: 'The requested vendor could not be found.'
-    };
-  }
-
-  return {
-    title: `${vendor.name} - ${vendor.category} | Wedding Vendors`,
-    description: `${vendor.name} is a ${vendor.category.toLowerCase()} located in ${vendor.location}. View details, read reviews, and get in touch.`,
-    openGraph: {
-      title: `${vendor.name} - ${vendor.category}`,
-      description: `${vendor.name} is a ${vendor.category.toLowerCase()} located in ${vendor.location}. View details, read reviews, and get in touch.`,
-      type: 'website',
-      siteName: 'WeddingVendors',
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: `${vendor.name} - ${vendor.category}`,
-      description: `${vendor.name} is a ${vendor.category.toLowerCase()} located in ${vendor.location}. View details, read reviews, and get in touch.`,
-    },
-  };
-}
-
-export default async function VendorPage({ params }: VendorPageProps) {
-  const vendor = await getVendor(params.category, params.id);
-
-  if (!vendor) {
-    notFound();
-  }
-
+export default function Page() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h1 className="text-3xl font-bold mb-4">{vendor.name}</h1>
-          <div className="flex items-center mb-4">
-            <div className="flex items-center">
-              {[...Array(5)].map((_, i) => (
-                <svg
-                  key={i}
-                  className={`w-5 h-5 ${
-                    i < vendor.rating ? 'text-yellow-400' : 'text-gray-300'
-                  }`}
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              ))}
-            </div>
-            <span className="ml-2 text-gray-600">{vendor.rating.toFixed(1)}</span>
-          </div>
-          <p className="text-gray-600 mb-4">{vendor.location}</p>
-          <div className="border-t pt-4">
-            <h2 className="text-xl font-semibold mb-2">About</h2>
-            <p className="text-gray-600">{vendor.description}</p>
-          </div>
-          <div className="mt-8">
-            <button className="bg-pink-500 text-white px-6 py-3 rounded-lg hover:bg-pink-600 transition-colors w-full">
-              Contact Vendor
-            </button>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Loading...</h1>
+            <p className="text-gray-600">
+              Please wait while we fetch the vendor details.
+            </p>
           </div>
         </div>
       </div>

@@ -1,31 +1,11 @@
-'use client';
-
-import { InquiryForm } from '@/components/inquiry-form';
-import { Metadata } from 'next';
-
-interface TestFormPageProps {
-  params: Record<string, never>;
-  searchParams: { [key: string]: string | string[] | undefined };
-}
-
-export default function TestFormPage({
-  params,
-  searchParams,
-}: TestFormPageProps) {
-  const handleSuccess = () => {
-    console.log('Form submitted successfully');
-  };
-
+export default function Page() {
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-3xl font-bold mb-8">Venue Inquiry Form</h1>
-      <div className="bg-white shadow-lg rounded-lg p-6">
-        <InquiryForm 
-          category="Wedding Venue"
-          city="New York"
-          state="NY"
-          onSuccess={handleSuccess}
-        />
+    <div className="container mx-auto px-4 py-8">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">Loading...</h1>
+        <p className="text-gray-600">
+          Please wait while we load the test form.
+        </p>
       </div>
     </div>
   );
