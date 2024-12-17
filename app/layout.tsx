@@ -45,7 +45,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <div className="relative flex min-h-screen flex-col">
           <MainNav />
-          <div className="flex-1">
+          <div className="flex-1 pt-16"> {/* Added pt-16 to account for the fixed navbar height */}
             {children}
           </div>
         </div>
