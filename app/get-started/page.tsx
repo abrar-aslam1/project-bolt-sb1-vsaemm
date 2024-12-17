@@ -1,4 +1,19 @@
-export default function GetStartedPage() {
+import { Metadata } from 'next';
+
+interface GetStartedPageProps {
+  params: Record<string, never>;
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export const metadata: Metadata = {
+  title: 'Get Started | Wedding Vendors',
+  description: 'Start planning your perfect wedding by creating your profile and connecting with trusted wedding vendors.',
+};
+
+export default function GetStartedPage({
+  params,
+  searchParams,
+}: GetStartedPageProps) {
   return (
     <main className="container mx-auto px-4 py-24">
       <div className="max-w-3xl mx-auto">

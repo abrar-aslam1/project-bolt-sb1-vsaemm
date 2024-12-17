@@ -1,4 +1,33 @@
-export default function BlogPage() {
+import { Metadata } from 'next';
+
+interface BlogPageProps {
+  params: Record<string, never>;
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export const metadata: Metadata = {
+  title: 'Blog | Wedding Vendors',
+  description: 'Coming soon - Wedding planning tips, vendor spotlights, and inspiration for your special day.',
+  openGraph: {
+    title: 'Blog | Wedding Vendors',
+    description: 'Coming soon - Wedding planning tips, vendor spotlights, and inspiration for your special day.',
+    type: 'website',
+    siteName: 'WeddingVendors',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Wedding Vendors Blog',
+    description: 'Coming soon - Wedding planning tips, vendor spotlights, and inspiration for your special day.',
+  },
+  alternates: {
+    canonical: '/blog',
+  },
+};
+
+export default function BlogPage({
+  params,
+  searchParams,
+}: BlogPageProps) {
   return (
     <main className="container mx-auto px-4 py-24">
       <h1 className="text-4xl font-bold mb-8">Blog</h1>
