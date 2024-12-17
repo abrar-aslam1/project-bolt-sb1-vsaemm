@@ -35,19 +35,19 @@ async function getPlaces(category: string, city: string, state: string) {
   }
 }
 
-interface PageProps {
-  params: {
+type PageProps = {
+  params: Promise<{
     category: string;
     city: string;
     state: string;
-  };
-}
+  }>;
+};
 
 export default async function Page({ params }: PageProps) {
-  // Create a Promise that resolves with the params to handle them asynchronously
-  const resolvedParams = await Promise.resolve(params);
-
   try {
+    // Wait for params to resolve
+    const resolvedParams = await params;
+
     // Validate params
     if (!resolvedParams?.category || !resolvedParams?.city || !resolvedParams?.state) {
       throw new Error('Missing required parameters');
