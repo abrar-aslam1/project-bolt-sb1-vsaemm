@@ -314,6 +314,7 @@ export class PlacesService {
   }
 
   static async getValidCategories(): Promise<string[]> {
-    return [...new Set(Object.values(categoryMapping))];
+    const uniqueCategories = new Set(Object.values(categoryMapping));
+    return Array.from(uniqueCategories);
   }
 }

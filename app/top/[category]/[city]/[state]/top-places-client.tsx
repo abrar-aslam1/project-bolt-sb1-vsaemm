@@ -1,6 +1,6 @@
 'use client';
 
-import { Breadcrumb } from 'components/ui/breadcrumb';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
 import Link from 'next/link';
 import { useState } from 'react';
 
