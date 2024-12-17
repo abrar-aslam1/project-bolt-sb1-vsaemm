@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 
 interface VendorsPageProps {
-  params: Record<string, never>;
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: {};
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 const categories = [

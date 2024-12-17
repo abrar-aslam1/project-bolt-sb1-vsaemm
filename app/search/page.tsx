@@ -3,8 +3,8 @@ import SearchBar from '@/components/search-bar';
 import VendorList from '@/components/vendors/VendorList';
 
 interface SearchPageProps {
-  params: Record<string, never>;
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: {};
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 export const metadata: Metadata = {
@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   description: 'Search for wedding vendors, venues, photographers, and more.',
 };
 
-export default async function SearchPage({
+export default function SearchPage({
   params,
   searchParams,
 }: SearchPageProps) {
-  const query = typeof searchParams.q === 'string' ? searchParams.q : '';
+  const query = typeof searchParams?.q === 'string' ? searchParams.q : '';
 
   return (
     <div className="container mx-auto px-4 py-8">

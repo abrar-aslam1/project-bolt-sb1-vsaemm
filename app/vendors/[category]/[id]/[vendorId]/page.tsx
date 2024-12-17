@@ -4,13 +4,13 @@ import { Metadata } from 'next';
 import { PlacesService } from '@/lib/services/places-service';
 import { VendorImage } from '../vendor-image';
 
-interface VendorPageProps {
-  params: { 
-    category: string; 
-    id: string; 
+interface VendorDetailsPageProps {
+  params: {
+    category: string;
+    id: string;
     vendorId: string;
   };
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 interface VendorDetails {
@@ -50,7 +50,7 @@ function formatCityName(citySlug: string): string {
 
 export async function generateMetadata({ 
   params 
-}: VendorPageProps): Promise<Metadata> {
+}: VendorDetailsPageProps): Promise<Metadata> {
   const cityName = formatCityName(params.id);
   const categoryTitle = params.category
     .split('-')
@@ -124,7 +124,7 @@ async function getVendorDetails(category: string, citySlug: string, vendorId: st
   }
 }
 
-export default async function VendorDetailsPage({ params }: VendorPageProps) {
+export default async function VendorDetailsPage({ params }: VendorDetailsPageProps) {
   const vendor = await getVendorDetails(params.category, params.id, params.vendorId);
 
   if (!vendor) {

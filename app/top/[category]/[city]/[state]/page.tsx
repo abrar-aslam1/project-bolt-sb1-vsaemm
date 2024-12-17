@@ -1,7 +1,8 @@
 import TopPlacesClient from './top-places-client';
 import { headers } from 'next/headers';
-import { categoryMapping } from 'lib/services/places-service';
-import { locationCoordinates } from 'lib/locations';
+import { categoryMapping } from '@/lib/services/places-service';
+import { locationCoordinates } from '@/lib/locations';
+import { Metadata } from 'next';
 
 interface TopPlacesPageProps {
   params: {
@@ -9,7 +10,7 @@ interface TopPlacesPageProps {
     city: string;
     state: string;
   };
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 interface Place {
@@ -22,13 +23,6 @@ interface Place {
   website?: string;
 }
 
-interface Location {
-  city: string;
-  state: string;
-  state_name: string;
-  category: string;
-}
-
 const normalizeString = (str: string): string => {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').trim();
 };
@@ -38,13 +32,14 @@ async function getPlaces(category: string, city: string, state: string): Promise
     // In Next.js 14, we can use the absolute URL since headers() might be unreliable
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+    console.log('Making request to:', `${baseUrl}/api/places/top`);
+    console.log('Request params:', { category, city, state });
+
     const queryParams = new URLSearchParams({
       category: normalizeString(category),
       city: normalizeString(city),
       state: state.toLowerCase()
     });
-
-    console.log('Making request to:', `${baseUrl}/api/places/top?${queryParams}`);
 
     const response = await fetch(`${baseUrl}/api/places/top?${queryParams}`, {
       method: 'GET',
@@ -67,6 +62,38 @@ async function getPlaces(category: string, city: string, state: string): Promise
     console.error('Error fetching places:', error);
     throw error;
   }
+}
+
+export async function generateMetadata({ 
+  params 
+}: TopPlacesPageProps): Promise<Metadata> {
+  const { category, city, state } = params;
+  const formattedCity = city.split('-').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
+  const mappedCategory = categoryMapping[normalizeString(category)];
+
+  const title = `Top ${mappedCategory}s in ${formattedCity}, ${state.toUpperCase()} | WeddingVendors`;
+  const description = `Discover the best ${mappedCategory.toLowerCase()}s in ${formattedCity}, ${state.toUpperCase()}. Compare ratings, reviews, and services to find your perfect match.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      siteName: 'WeddingVendors',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+    alternates: {
+      canonical: `/top/${category}/${city}/${state}`,
+    },
+  };
 }
 
 export default async function TopPlacesPage({ params }: TopPlacesPageProps) {

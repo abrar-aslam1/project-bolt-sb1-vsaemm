@@ -1,20 +1,29 @@
-import { ObjectId } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
 import clientPromise from '@/lib/mongodb';
 
 interface VendorPageProps {
-  params: { 
-    category: string; 
+  params: {
+    category: string;
     id: string;
   };
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
-async function getVendor(category: string, id: string) {
+interface Vendor {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  location: string;
+  rating: number;
+}
+
+async function getVendor(category: string, id: string): Promise<Vendor | null> {
+  const client = await clientPromise;
   try {
-    const client = await clientPromise;
     const db = client.db('wedding_vendors');
-    
     const vendor = await db.collection('vendors').findOne({
       _id: new ObjectId(id),
       category: category
@@ -36,6 +45,35 @@ async function getVendor(category: string, id: string) {
     console.error('Error fetching vendor:', error);
     return null;
   }
+}
+
+export async function generateMetadata({ 
+  params 
+}: VendorPageProps): Promise<Metadata> {
+  const vendor = await getVendor(params.category, params.id);
+  
+  if (!vendor) {
+    return {
+      title: 'Vendor Not Found',
+      description: 'The requested vendor could not be found.'
+    };
+  }
+
+  return {
+    title: `${vendor.name} - ${vendor.category} | Wedding Vendors`,
+    description: `${vendor.name} is a ${vendor.category.toLowerCase()} located in ${vendor.location}. View details, read reviews, and get in touch.`,
+    openGraph: {
+      title: `${vendor.name} - ${vendor.category}`,
+      description: `${vendor.name} is a ${vendor.category.toLowerCase()} located in ${vendor.location}. View details, read reviews, and get in touch.`,
+      type: 'website',
+      siteName: 'WeddingVendors',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${vendor.name} - ${vendor.category}`,
+      description: `${vendor.name} is a ${vendor.category.toLowerCase()} located in ${vendor.location}. View details, read reviews, and get in touch.`,
+    },
+  };
 }
 
 export default async function VendorPage({ params }: VendorPageProps) {

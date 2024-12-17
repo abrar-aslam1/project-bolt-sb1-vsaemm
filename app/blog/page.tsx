@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 
 interface BlogPageProps {
-  params: Record<string, never>;
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: {};
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 export const metadata: Metadata = {

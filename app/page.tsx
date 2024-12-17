@@ -3,16 +3,27 @@ import VendorCategories from '@/components/vendors/VendorCategories';
 import SearchBar from '@/components/search-bar';
 
 interface HomePageProps {
-  params: Record<string, never>;
-  searchParams: { [key: string]: string | string[] | undefined };
+  params: {};
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 export const metadata: Metadata = {
   title: 'Find Your Perfect Wedding Vendors | WeddingVendors',
   description: 'Discover and connect with the best wedding professionals in your area. Browse venues, photographers, caterers, and more.',
+  openGraph: {
+    title: 'Find Your Perfect Wedding Vendors',
+    description: 'Discover and connect with the best wedding professionals in your area.',
+    type: 'website',
+    siteName: 'WeddingVendors',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Find Your Perfect Wedding Vendors',
+    description: 'Discover and connect with the best wedding professionals in your area.',
+  },
 };
 
-export default function Home({
+export default function HomePage({
   params,
   searchParams,
 }: HomePageProps) {

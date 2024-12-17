@@ -4,10 +4,10 @@ import { Metadata } from 'next';
 import { citiesByState } from '@/lib/locations';
 
 interface CategoryPageProps {
-  params: { 
+  params: {
     category: string;
   };
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 const categoryTitles: Record<string, string> = {
@@ -185,7 +185,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
                     const citySlug = city.toLowerCase().replace(/\s+/g, '-');
                     return (
                       <Link
-                        key={city}
+                        key={`${state}-${city}`}
                         href={`/top/${params.category}/${citySlug}/${stateId.toLowerCase()}`}
                         className="group p-4 bg-gray-50 rounded-lg hover:bg-blue-50 transition-colors duration-200"
                       >
