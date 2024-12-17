@@ -1,8 +1,17 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { PlacesService } from 'lib/services/places-service';
+import { PlacesService } from '@/lib/services/places-service';
 import { VendorImage } from '../vendor-image';
+
+interface VendorPageProps {
+  params: { 
+    category: string; 
+    id: string; 
+    vendorId: string;
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
 
 interface VendorDetails {
   name: string;
@@ -41,9 +50,7 @@ function formatCityName(citySlug: string): string {
 
 export async function generateMetadata({ 
   params 
-}: { 
-  params: { category: string; id: string; vendorId: string } 
-}): Promise<Metadata> {
+}: VendorPageProps): Promise<Metadata> {
   const cityName = formatCityName(params.id);
   const categoryTitle = params.category
     .split('-')
@@ -52,7 +59,12 @@ export async function generateMetadata({
 
   // Fetch vendor details for accurate metadata
   const vendor = await getVendorDetails(params.category, params.id, params.vendorId);
-  if (!vendor) return notFound();
+  if (!vendor) {
+    return {
+      title: 'Vendor Not Found',
+      description: 'The requested vendor could not be found.'
+    };
+  }
 
   const title = `${vendor.name} - ${categoryTitle} in ${cityName} | WeddingVendors`;
   const description = `${vendor.name} is a ${categoryMap[params.category]} in ${cityName}. View photos, read reviews, and get contact information.`;
@@ -112,11 +124,7 @@ async function getVendorDetails(category: string, citySlug: string, vendorId: st
   }
 }
 
-export default async function VendorDetailsPage({ 
-  params 
-}: { 
-  params: { category: string; id: string; vendorId: string } 
-}) {
+export default async function VendorDetailsPage({ params }: VendorPageProps) {
   const vendor = await getVendorDetails(params.category, params.id, params.vendorId);
 
   if (!vendor) {

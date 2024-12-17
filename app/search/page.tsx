@@ -1,12 +1,21 @@
+import { Metadata } from 'next';
 import SearchBar from '@/components/search-bar';
 import VendorList from '@/components/vendors/VendorList';
 
+interface SearchPageProps {
+  params: {};
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export const metadata: Metadata = {
+  title: 'Search Wedding Vendors',
+  description: 'Search for wedding vendors, venues, photographers, and more.',
+};
+
 export default async function SearchPage({
   searchParams,
-}: {
-  searchParams: { q: string };
-}) {
-  const query = searchParams.q || '';
+}: SearchPageProps) {
+  const query = typeof searchParams.q === 'string' ? searchParams.q : '';
 
   return (
     <div className="container mx-auto px-4 py-8">

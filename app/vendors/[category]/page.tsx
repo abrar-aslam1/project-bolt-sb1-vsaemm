@@ -3,6 +3,13 @@ import Link from 'next/link';
 import { Metadata } from 'next';
 import { citiesByState } from '@/lib/locations';
 
+interface CategoryPageProps {
+  params: { 
+    category: string;
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
 const categoryTitles: Record<string, string> = {
   'wedding-venues': 'Wedding Venues',
   'photographers': 'Wedding Photographers',
@@ -82,9 +89,7 @@ const stateIds: Record<string, string> = {
 
 export async function generateMetadata({ 
   params 
-}: { 
-  params: { category: string } 
-}): Promise<Metadata> {
+}: CategoryPageProps): Promise<Metadata> {
   const title = `${categoryTitles[params.category]} | Find Local Wedding Vendors`;
   const description = categoryDescriptions[params.category];
 
@@ -122,7 +127,7 @@ export async function generateStaticParams() {
   }));
 }
 
-export default function CategoryPage({ params }: { params: { category: string } }) {
+export default function CategoryPage({ params }: CategoryPageProps) {
   const title = categoryTitles[params.category];
 
   if (!title) {

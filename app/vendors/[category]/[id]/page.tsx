@@ -1,18 +1,20 @@
-import { MongoClient, ObjectId } from 'mongodb';
+import { ObjectId } from 'mongodb';
 import { notFound } from 'next/navigation';
+import clientPromise from '@/lib/mongodb';
 
-const uri = process.env.MONGODB_URI;
-
-if (!uri) {
-  throw new Error('Please add your Mongo URI to .env.local');
+interface VendorPageProps {
+  params: { 
+    category: string; 
+    id: string;
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
 }
 
 async function getVendor(category: string, id: string) {
-  const client = new MongoClient(uri!); // Assert that uri is not undefined
   try {
-    await client.connect();
-
+    const client = await clientPromise;
     const db = client.db('wedding_vendors');
+    
     const vendor = await db.collection('vendors').findOne({
       _id: new ObjectId(id),
       category: category
@@ -33,16 +35,10 @@ async function getVendor(category: string, id: string) {
   } catch (error) {
     console.error('Error fetching vendor:', error);
     return null;
-  } finally {
-    await client.close();
   }
 }
 
-export default async function VendorPage({
-  params,
-}: {
-  params: { category: string; id: string };
-}) {
+export default async function VendorPage({ params }: VendorPageProps) {
   const vendor = await getVendor(params.category, params.id);
 
   if (!vendor) {

@@ -8,7 +8,8 @@ interface TopPlacesPageProps {
     category: string;
     city: string;
     state: string;
-  }
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
 }
 
 interface Place {
@@ -34,24 +35,22 @@ const normalizeString = (str: string): string => {
 
 async function getPlaces(category: string, city: string, state: string): Promise<Place[]> {
   try {
-    const headersList = headers();
-    const protocol = headersList.get('x-forwarded-proto') || 'http';
-    const host = headersList.get('host') || '';
-    const baseUrl = `${protocol}://${host}`;
+    // In Next.js 14, we can use the absolute URL since headers() might be unreliable
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-    console.log('Making request to:', `${baseUrl}/api/places/top`);
-    console.log('Request body:', { category, city, state });
+    const queryParams = new URLSearchParams({
+      category: normalizeString(category),
+      city: normalizeString(city),
+      state: state.toLowerCase()
+    });
 
-    const response = await fetch(`${baseUrl}/api/places/top`, {
-      method: 'POST',
+    console.log('Making request to:', `${baseUrl}/api/places/top?${queryParams}`);
+
+    const response = await fetch(`${baseUrl}/api/places/top?${queryParams}`, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
-        category: normalizeString(category),
-        city: normalizeString(city),
-        state: state.toLowerCase()
-      }),
       cache: 'no-store'
     });
 
