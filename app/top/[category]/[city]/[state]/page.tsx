@@ -1,10 +1,6 @@
 import TopPlacesClient from './top-places-client';
-import { categoryMapping } from '@/lib/services/places-service';
-import { locationCoordinates } from '@/lib/locations';
-
-const normalizeString = (str: string): string => {
-  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').trim();
-};
+import { normalizeString } from '@/lib/utils';
+import { Place } from '@/lib/services/places-client';
 
 async function getPlaces(category: string, city: string, state: string) {
   try {
@@ -15,7 +11,7 @@ async function getPlaces(category: string, city: string, state: string) {
       state: state.toLowerCase()
     });
 
-    const response = await fetch(`${baseUrl}/api/places/top?${queryParams}`, {
+    const response = await fetch(`${baseUrl}/.netlify/functions/api/places-top?${queryParams}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -36,32 +32,29 @@ async function getPlaces(category: string, city: string, state: string) {
 }
 
 type PageProps = {
-  params: Promise<{
+  params: {
     category: string;
     city: string;
     state: string;
-  }>;
+  };
 };
 
 export default async function Page({ params }: PageProps) {
   try {
-    // Wait for params to resolve
-    const resolvedParams = await params;
-
     // Validate params
-    if (!resolvedParams?.category || !resolvedParams?.city || !resolvedParams?.state) {
+    if (!params?.category || !params?.city || !params?.state) {
       throw new Error('Missing required parameters');
     }
 
     // Fetch the places data
     const places = await getPlaces(
-      resolvedParams.category,
-      resolvedParams.city,
-      resolvedParams.state
-    );
+      params.category,
+      params.city,
+      params.state
+    ) as Place[];
 
     // Pass both the places data and the params to the client component
-    return <TopPlacesClient initialPlaces={places} params={resolvedParams} />;
+    return <TopPlacesClient initialPlaces={places} params={params} />;
   } catch (error) {
     console.error('Error in page:', error);
     return (

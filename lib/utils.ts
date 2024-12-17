@@ -1,5 +1,5 @@
 import { citiesByState } from './locations';
-import { categoryMapping } from './services/places-service';
+import { categoryMapping } from './services/places-client';
 
 interface ParsedSearch {
   category?: string;

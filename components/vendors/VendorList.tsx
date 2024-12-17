@@ -3,21 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import VendorCard from './VendorCard';
-import { parseSearchQuery, normalizeString, getBaseUrl } from '@/lib/utils';
-
-interface Place {
-  placeId: string;
-  name: string;
-  address: string;
-  rating: number;
-  totalRatings: number;
-  priceLevel?: string;
-  website?: string;
-  location: {
-    type: string;
-    coordinates: [number, number];
-  };
-}
+import { parseSearchQuery, normalizeString } from '@/lib/utils';
+import { searchPlaces, Place } from '@/lib/services/places-client';
 
 interface VendorListProps {
   query: string;
@@ -44,24 +31,17 @@ export default function VendorList({ query }: VendorListProps) {
         }
 
         // Otherwise, search using the places API
-        const searchParams = new URLSearchParams();
-        if (parsed.category) searchParams.set('category', parsed.category);
-        if (parsed.city) searchParams.set('city', parsed.city);
-        if (parsed.state) searchParams.set('state', parsed.state);
-        if (!parsed.category && !parsed.city && !parsed.state) {
-          searchParams.set('q', query); // Use raw query if no structured data found
+        if (parsed.category && parsed.city && parsed.state) {
+          const results = await searchPlaces(
+            parsed.category,
+            parsed.city,
+            parsed.state
+          );
+          setPlaces(results);
+        } else {
+          // If we don't have all the required parameters, show no results
+          setPlaces([]);
         }
-
-        const response = await fetch(
-          `${getBaseUrl()}/.netlify/functions/api/places-search?${searchParams.toString()}`
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch places');
-        }
-
-        const data = await response.json();
-        setPlaces(data.results || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {

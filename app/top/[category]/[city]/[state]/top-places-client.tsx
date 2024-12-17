@@ -3,17 +3,8 @@
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import Link from 'next/link';
 import { useState } from 'react';
-
-interface Place {
-  placeId: string;
-  name: string;
-  address: string;
-  rating?: number;
-  totalRatings?: number;
-  priceLevel?: string;
-  website?: string;
-  phoneNumber?: string;
-}
+import { Place } from '@/lib/services/places-client';
+import { normalizeString } from '@/lib/utils';
 
 interface TopPlacesClientProps {
   initialPlaces: Place[];
@@ -64,7 +55,7 @@ export default function TopPlacesClient({ initialPlaces, params }: TopPlacesClie
     { label: 'Home', href: '/' },
     { label: 'Top Venues', href: '/top' },
     { label: formattedCategory, href: `/top/${category}` },
-    { label: `${city}, ${state}`, href: `/top/${category}/${city}/${state}` },
+    { label: `${city}, ${state}`, href: `/top/${category}/${normalizeString(city)}/${normalizeString(state)}` },
   ];
 
   return (
@@ -159,9 +150,6 @@ export default function TopPlacesClient({ initialPlaces, params }: TopPlacesClie
                       )}
                       {place.priceLevel && (
                         <p><strong>Price Level:</strong> {place.priceLevel}</p>
-                      )}
-                      {place.phoneNumber && (
-                        <p><strong>Phone:</strong> {place.phoneNumber}</p>
                       )}
                       {place.website && (
                         <Link
