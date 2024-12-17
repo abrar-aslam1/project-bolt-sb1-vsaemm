@@ -1,10 +1,18 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-export default function TestPlacesPage() {
+interface TestPlacesPageProps {
+  params: Record<string, never>;
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export default function TestPlacesPage({
+  params,
+  searchParams,
+}: TestPlacesPageProps) {
   const [category, setCategory] = useState('Wedding Venue');
   const [city, setCity] = useState('New York');
   const [state, setState] = useState('NY');

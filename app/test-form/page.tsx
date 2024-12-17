@@ -1,8 +1,17 @@
-"use client";
+'use client';
 
 import { InquiryForm } from '@/components/inquiry-form';
+import { Metadata } from 'next';
 
-export default function TestFormPage() {
+interface TestFormPageProps {
+  params: Record<string, never>;
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export default function TestFormPage({
+  params,
+  searchParams,
+}: TestFormPageProps) {
   const handleSuccess = () => {
     console.log('Form submitted successfully');
   };

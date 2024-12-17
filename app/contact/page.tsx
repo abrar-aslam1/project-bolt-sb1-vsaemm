@@ -1,4 +1,19 @@
-export default function ContactPage() {
+import { Metadata } from 'next';
+
+interface ContactPageProps {
+  params: Record<string, never>;
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export const metadata: Metadata = {
+  title: 'Contact Us | Wedding Vendors',
+  description: 'Get in touch with us for any questions about wedding vendors and services.',
+};
+
+export default function ContactPage({
+  params,
+  searchParams,
+}: ContactPageProps) {
   return (
     <main className="container mx-auto px-4 py-24">
       <div className="max-w-2xl mx-auto">

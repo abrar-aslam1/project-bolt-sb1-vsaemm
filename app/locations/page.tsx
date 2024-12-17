@@ -3,6 +3,11 @@
 import Link from 'next/link';
 import { citiesByState, locationCoordinates } from '@/lib/locations';
 
+interface LocationsPageProps {
+  params: Record<string, never>;
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
 interface State {
   state_name: string;
   cities: string[];
@@ -27,7 +32,10 @@ function isValidLocation(citySlug: string): boolean {
   return citySlug in locationCoordinates;
 }
 
-export default function LocationsPage() {
+export default function LocationsPage({
+  params,
+  searchParams,
+}: LocationsPageProps) {
   const states = getStateData();
 
   return (

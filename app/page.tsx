@@ -1,7 +1,21 @@
+import { Metadata } from 'next';
 import VendorCategories from '@/components/vendors/VendorCategories';
 import SearchBar from '@/components/search-bar';
 
-export default function Home() {
+interface HomePageProps {
+  params: Record<string, never>;
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export const metadata: Metadata = {
+  title: 'Find Your Perfect Wedding Vendors | WeddingVendors',
+  description: 'Discover and connect with the best wedding professionals in your area. Browse venues, photographers, caterers, and more.',
+};
+
+export default function Home({
+  params,
+  searchParams,
+}: HomePageProps) {
   return (
     <main className="container mx-auto px-4 py-8">
       <div className="text-center mb-12">

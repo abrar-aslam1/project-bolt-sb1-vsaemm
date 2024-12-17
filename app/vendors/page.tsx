@@ -1,6 +1,11 @@
 import Link from 'next/link';
 import { Metadata } from 'next';
 
+interface VendorsPageProps {
+  params: Record<string, never>;
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
 const categories = [
   {
     id: 'wedding-venues',
@@ -85,7 +90,10 @@ export const metadata: Metadata = {
   ],
 };
 
-export default function VendorsPage() {
+export default function VendorsPage({
+  params,
+  searchParams,
+}: VendorsPageProps) {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">

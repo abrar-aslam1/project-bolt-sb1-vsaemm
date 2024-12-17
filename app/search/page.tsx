@@ -3,7 +3,7 @@ import SearchBar from '@/components/search-bar';
 import VendorList from '@/components/vendors/VendorList';
 
 interface SearchPageProps {
-  params: {};
+  params: Record<string, never>;
   searchParams: { [key: string]: string | string[] | undefined };
 }
 
@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function SearchPage({
+  params,
   searchParams,
 }: SearchPageProps) {
   const query = typeof searchParams.q === 'string' ? searchParams.q : '';
