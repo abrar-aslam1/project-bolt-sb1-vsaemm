@@ -75,17 +75,17 @@ export async function searchPlaces(category: string, city: string, state: string
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-  const queryParams = new URLSearchParams({
-    category: normalizeString(category),
-    city: normalizeString(city),
-    state: state.toLowerCase()
-  });
 
-  const response = await fetch(`${baseUrl}/.netlify/functions/api/places-search?${queryParams}`, {
-    method: 'GET',
+  const response = await fetch(`${baseUrl}/.netlify/functions/api/places-search`, {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-    }
+    },
+    body: JSON.stringify({
+      category: normalizeString(category),
+      city: normalizeString(city),
+      state: state.toLowerCase()
+    })
   });
 
   if (!response.ok) {
@@ -98,18 +98,18 @@ export async function searchPlaces(category: string, city: string, state: string
 
 export async function getTopPlaces(category: string, city: string, state: string, limit = 10): Promise<Place[]> {
   const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-  const queryParams = new URLSearchParams({
-    category: normalizeString(category),
-    city: normalizeString(city),
-    state: state.toLowerCase(),
-    limit: limit.toString()
-  });
 
-  const response = await fetch(`${baseUrl}/.netlify/functions/api/places-top?${queryParams}`, {
-    method: 'GET',
+  const response = await fetch(`${baseUrl}/.netlify/functions/api/places-top`, {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-    }
+    },
+    body: JSON.stringify({
+      category: normalizeString(category),
+      city: normalizeString(city),
+      state: state.toLowerCase(),
+      limit
+    })
   });
 
   if (!response.ok) {

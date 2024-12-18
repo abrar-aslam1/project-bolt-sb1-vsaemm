@@ -30,16 +30,16 @@ export default function VendorList({ query }: VendorListProps) {
           return;
         }
 
-        // Otherwise, search using the places API
-        if (parsed.category && parsed.city && parsed.state) {
+        // If we have at least one parameter, try to search
+        if (parsed.category || parsed.city || parsed.state) {
           const results = await searchPlaces(
-            parsed.category,
-            parsed.city,
-            parsed.state
+            parsed.category || 'venue', // Default to venue if no category
+            parsed.city || 'New York', // Default to New York if no city
+            parsed.state || 'New York' // Default to New York if no state
           );
           setPlaces(results);
         } else {
-          // If we don't have all the required parameters, show no results
+          // If we don't have any parameters, show no results
           setPlaces([]);
         }
       } catch (err) {
