@@ -3,34 +3,31 @@ import { MongoClient } from 'mongodb';
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const MONGODB_URI = process.env.MONGODB_URI;
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
-// Location coordinates and category mapping
-const categoryMapping: Record<string, string> = {
-  'venue': 'Wedding Venue',
-  'venues': 'Wedding Venue',
-  'wedding-venues': 'Wedding Venue',
-  'photographer': 'Wedding Photographer',
-  'photographers': 'Wedding Photographer',
-  'photography': 'Wedding Photographer',
-  'caterer': 'Wedding Caterer',
-  'caterers': 'Wedding Caterer',
-  'catering': 'Wedding Caterer',
-  'florist': 'Wedding Florist',
-  'florists': 'Wedding Florist',
-  'flowers': 'Wedding Florist',
-  'planner': 'Wedding Planner',
-  'planners': 'Wedding Planner',
-  'planning': 'Wedding Planner',
-  'dress': 'Wedding Dress Shop',
-  'dresses': 'Wedding Dress Shop',
-  'dress-shops': 'Wedding Dress Shop',
-  'beauty': 'Wedding Makeup Artist',
-  'makeup': 'Wedding Makeup Artist',
-  'dj': 'Wedding DJ',
-  'djs': 'Wedding DJ',
-  'music': 'Wedding DJ'
-};
+let cachedClient: MongoClient | null = null;
 
+async function connectToDatabase() {
+  if (!MONGODB_URI) {
+    throw new Error('MONGODB_URI is not defined');
+  }
+
+  if (cachedClient) {
+    return cachedClient;
+  }
+
+  try {
+    const client = new MongoClient(MONGODB_URI);
+    await client.connect();
+    cachedClient = client;
+    return client;
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw error;
+  }
+}
+
+// Location coordinates for Google Places API
 const locationCoordinates: Record<string, string> = {
   'phoenix': '33.4484,-112.0740,10',
   'tucson': '32.2226,-110.9747,10',
@@ -79,21 +76,11 @@ function normalizeString(str: string): string {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').trim();
 }
 
-function normalizeCategory(category: string): string {
-  const mappedCategory = categoryMapping[category.toLowerCase()];
-  if (mappedCategory) {
-    return mappedCategory;
-  }
-
-  const normalizedCategory = normalizeString(category);
-  if (!normalizedCategory.includes('wedding')) {
-    return `Wedding ${category.charAt(0).toUpperCase() + category.slice(1)}`;
-  }
-
-  return category.charAt(0).toUpperCase() + category.slice(1);
-}
-
 async function searchGooglePlaces(query: string, city: string, state: string): Promise<any[]> {
+  if (!GOOGLE_API_KEY) {
+    throw new Error('GOOGLE_API_KEY is not defined');
+  }
+
   const url = `https://places.googleapis.com/v1/places:searchText`;
   
   // Get coordinates for the city
@@ -111,56 +98,115 @@ async function searchGooglePlaces(query: string, city: string, state: string): P
   const formattedQuery = `${query} in ${city}, ${state}`;
   console.log('Google Places API Query:', formattedQuery);
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': GOOGLE_API_KEY!,
-      'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.websiteUri,places.id'
-    },
-    body: JSON.stringify({
-      textQuery: formattedQuery,
-      locationBias: {
-        circle: {
-          center: {
-            latitude: lat,
-            longitude: lng
-          },
-          radius: radius * 1000 // Convert to meters
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_API_KEY,
+        'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.priceLevel,places.websiteUri,places.id'
+      },
+      body: JSON.stringify({
+        textQuery: formattedQuery,
+        locationBias: {
+          circle: {
+            center: {
+              latitude: lat,
+              longitude: lng
+            },
+            radius: radius * 1000 // Convert to meters
+          }
+        },
+        maxResultCount: 20,
+        languageCode: "en"
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Google Places API Error:', errorText);
+      throw new Error(`Google Places API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('Google Places API Response:', JSON.stringify(data, null, 2));
+
+    if (!data.places || !Array.isArray(data.places)) {
+      console.error('No places found in response');
+      return [];
+    }
+
+    return data.places.map((place: any) => ({
+      placeId: place.id,
+      name: place.displayName.text,
+      address: place.formattedAddress,
+      rating: place.rating,
+      totalRatings: place.userRatingCount,
+      priceLevel: place.priceLevel,
+      website: place.websiteUri,
+      location: {
+        type: 'Point',
+        coordinates: [place.location.longitude, place.location.latitude]
+      },
+      cached: new Date()
+    }));
+  } catch (error) {
+    console.error('Error in searchGooglePlaces:', error);
+    throw error;
+  }
+}
+
+async function getCachedResults(category: string, city: string, state: string): Promise<any | null> {
+  try {
+    const client = await connectToDatabase();
+    const db = client.db('wedding_directory');
+    const collection = db.collection('cached_searches');
+
+    return await collection.findOne({
+      category,
+      city: normalizeString(city),
+      state: state.toLowerCase(),
+      lastUpdated: { $gt: new Date(Date.now() - CACHE_DURATION) }
+    });
+  } catch (error) {
+    console.error('Error getting cached results:', error);
+    return null;
+  }
+}
+
+async function cacheResults(places: any[], category: string, city: string, state: string) {
+  try {
+    const client = await connectToDatabase();
+    const db = client.db('wedding_directory');
+    const collection = db.collection('cached_searches');
+    const placesCollection = db.collection('places');
+
+    // Insert individual places
+    if (places.length > 0) {
+      await placesCollection.insertMany(places, { ordered: false })
+        .catch((error: Error) => console.log('Some places already exist in the database:', error.message));
+    }
+
+    // Cache the search results
+    await collection.updateOne(
+      {
+        category,
+        city: normalizeString(city),
+        state: state.toLowerCase()
+      },
+      {
+        $set: {
+          query: `${category} in ${city}, ${state}`,
+          results: places,
+          lastUpdated: new Date(),
+          totalResults: places.length
         }
       },
-      maxResultCount: 20,
-      languageCode: "en"
-    })
-  });
-
-  if (!response.ok) {
-    console.error('Google Places API Error:', await response.text());
-    throw new Error('Failed to fetch from Google Places API');
+      { upsert: true }
+    );
+  } catch (error) {
+    console.error('Error caching results:', error);
   }
-
-  const data = await response.json();
-  console.log('Google Places API Response:', JSON.stringify(data, null, 2));
-
-  if (!data.places || !Array.isArray(data.places)) {
-    console.error('No places found in response');
-    return [];
-  }
-
-  return data.places.map((place: any) => ({
-    placeId: place.id,
-    name: place.displayName.text,
-    address: place.formattedAddress,
-    rating: place.rating,
-    totalRatings: place.userRatingCount,
-    priceLevel: place.priceLevel,
-    website: place.websiteUri,
-    location: {
-      type: 'Point',
-      coordinates: [place.location.longitude, place.location.latitude]
-    },
-    cached: new Date()
-  }));
 }
 
 export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
@@ -168,7 +214,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Content-Type': 'application/json'
   };
 
@@ -182,11 +228,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
   }
 
   try {
-    if (!GOOGLE_API_KEY) {
-      throw new Error('GOOGLE_API_KEY not found in environment variables');
-    }
-
-    if (event.httpMethod !== 'GET') {
+    if (event.httpMethod !== 'POST') {
       return {
         statusCode: 405,
         headers,
@@ -194,50 +236,78 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       };
     }
 
-    // Get parameters from query string
-    const params = event.queryStringParameters || {};
-    const { category, city, state } = params;
+    const body = JSON.parse(event.body || '{}');
+    const { category, city, state, limit = 10 } = body;
 
     if (!category || !city || !state) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Missing required parameters' })
+        body: JSON.stringify({ error: 'Missing required fields' })
       };
     }
 
-    // Search for places
-    const places = await searchGooglePlaces(
-      normalizeCategory(category),
-      city,
-      state
-    );
+    console.log('Searching for:', {
+      category,
+      city: normalizeString(city),
+      state: state.toLowerCase(),
+      limit
+    });
 
-    // Sort results by rating and total ratings
-    const sortedResults = places.sort((a: any, b: any) => {
+    // Check cache first
+    const cachedResults = await getCachedResults(category, city, state);
+    if (cachedResults) {
+      console.log('Returning cached results');
+      const sortedResults = [...cachedResults.results].sort((a, b) => {
+        // Sort by rating first
+        if (b.rating !== a.rating) {
+          return (b.rating || 0) - (a.rating || 0);
+        }
+        // If ratings are equal, sort by number of ratings
+        return (b.totalRatings || 0) - (a.totalRatings || 0);
+      }).slice(0, limit);
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          ...cachedResults,
+          results: sortedResults,
+          totalResults: sortedResults.length
+        })
+      };
+    }
+
+    // If not in cache, fetch from Google Places API
+    console.log('Fetching from Google Places API');
+    const places = await searchGooglePlaces(category, city, state);
+
+    // Sort and limit results
+    const sortedResults = [...places].sort((a, b) => {
       // Sort by rating first
       if (b.rating !== a.rating) {
         return (b.rating || 0) - (a.rating || 0);
       }
       // If ratings are equal, sort by number of ratings
       return (b.totalRatings || 0) - (a.totalRatings || 0);
-    });
+    }).slice(0, limit);
 
-    // Take top 10 results
-    const topResults = sortedResults.slice(0, 10);
+    // Cache all results
+    console.log('Caching results');
+    await cacheResults(places, category, city, state);
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         query: `${category} in ${city}, ${state}`,
-        results: topResults,
+        results: sortedResults,
         lastUpdated: new Date(),
-        totalResults: topResults.length
+        totalResults: sortedResults.length
       })
     };
   } catch (error) {
-    console.error('Error getting top places:', error);
+    console.error('Error in handler:', error);
     return {
       statusCode: 500,
       headers,
