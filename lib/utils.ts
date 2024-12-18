@@ -1,10 +1,16 @@
 import { citiesByState } from './locations';
 import { categoryMapping } from './services/places-client';
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 interface ParsedSearch {
   category?: string;
   city?: string;
   state?: string;
+}
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
 export function normalizeString(str: string): string {

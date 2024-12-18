@@ -1,15 +1,23 @@
 import { Metadata } from 'next';
 
-type Props = {
-  params: {
-    category: string;
-    city: string;
-    state: string;
-  };
-};
+interface PageParams {
+  category: string;
+  city: string;
+  state: string;
+}
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { category, city, state } = params;
+interface PageSearchParams {
+  [key: string]: string | string[] | undefined;
+}
+
+interface Props {
+  params: Promise<PageParams>;
+  searchParams: Promise<PageSearchParams>;
+}
+
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+  const resolvedParams = await params;
+  const { category, city, state } = resolvedParams;
   const formattedCategory = category.split('-').map(word => 
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');

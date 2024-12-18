@@ -31,30 +31,39 @@ async function getPlaces(category: string, city: string, state: string) {
   }
 }
 
-type PageProps = {
-  params: {
-    category: string;
-    city: string;
-    state: string;
-  };
-};
+interface PageParams {
+  category: string;
+  city: string;
+  state: string;
+}
 
-export default async function Page({ params }: PageProps) {
+interface PageSearchParams {
+  [key: string]: string | string[] | undefined;
+}
+
+interface Props {
+  params: Promise<PageParams>;
+  searchParams: Promise<PageSearchParams>;
+}
+
+export default async function Page({ params, searchParams }: Props) {
   try {
+    const resolvedParams = await params;
+    
     // Validate params
-    if (!params?.category || !params?.city || !params?.state) {
+    if (!resolvedParams?.category || !resolvedParams?.city || !resolvedParams?.state) {
       throw new Error('Missing required parameters');
     }
 
     // Fetch the places data
     const places = await getPlaces(
-      params.category,
-      params.city,
-      params.state
+      resolvedParams.category,
+      resolvedParams.city,
+      resolvedParams.state
     ) as Place[];
 
     // Pass both the places data and the params to the client component
-    return <TopPlacesClient initialPlaces={places} params={params} />;
+    return <TopPlacesClient initialPlaces={places} params={resolvedParams} />;
   } catch (error) {
     console.error('Error in page:', error);
     return (
