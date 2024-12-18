@@ -5,21 +5,23 @@ import { Place } from '@/lib/services/places-client';
 async function getPlaces(category: string, city: string, state: string) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    const queryParams = new URLSearchParams({
-      category: normalizeString(category),
-      city: normalizeString(city),
-      state: state.toLowerCase()
-    });
 
-    const response = await fetch(`${baseUrl}/.netlify/functions/api/places-top?${queryParams}`, {
-      method: 'GET',
+    const response = await fetch(`${baseUrl}/api/places/top`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        category: normalizeString(category),
+        city: normalizeString(city),
+        state: state.toLowerCase()
+      }),
       cache: 'no-store'
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
       throw new Error(`Failed to fetch places: ${response.status}`);
     }
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import VendorCard from './VendorCard';
 import { parseSearchQuery, normalizeString } from '@/lib/utils';
-import { searchPlaces, Place } from '@/lib/services/places-client';
+import { Place } from '@/lib/services/places-client';
 
 interface VendorListProps {
   query: string;
@@ -30,18 +30,17 @@ export default function VendorList({ query }: VendorListProps) {
           return;
         }
 
-        // If we have at least one parameter, try to search
-        if (parsed.category || parsed.city || parsed.state) {
-          const results = await searchPlaces(
-            parsed.category || 'venue', // Default to venue if no category
-            parsed.city || 'New York', // Default to New York if no city
-            parsed.state || 'New York' // Default to New York if no state
-          );
-          setPlaces(results);
-        } else {
-          // If we don't have any parameters, show no results
-          setPlaces([]);
+        // Otherwise, search using the search API
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Search error:', errorText);
+          throw new Error(`Failed to fetch places: ${response.status}`);
         }
+
+        const data = await response.json();
+        setPlaces(data.results || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {

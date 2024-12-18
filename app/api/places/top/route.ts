@@ -1,31 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PlacesService } from '@/lib/services/places-service';
 
-export const dynamic = 'force-dynamic';
-
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const category = searchParams.get('category');
-    const city = searchParams.get('city');
-    const state = searchParams.get('state');
+    const body = await request.json();
+    const { category, city, state } = body;
 
     if (!category || !city || !state) {
       return NextResponse.json(
-        { error: 'Missing required parameters' },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    console.log('Fetching top places for:', { category, city, state });
-    const places = await PlacesService.getTopPlaces(category, city, state);
-    console.log('Found places:', places.length);
-    
-    return NextResponse.json({ results: places });
-  } catch (error: any) {
-    console.error('Error in top places API:', error);
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+    // Forward the request to the Netlify function
+    const response = await fetch(`${baseUrl}/.netlify/functions/api/places-top`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        category,
+        city,
+        state
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Netlify function error:', errorText);
+      return NextResponse.json(
+        { error: `Failed to fetch places: ${response.status}` },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('API route error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch top places' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
