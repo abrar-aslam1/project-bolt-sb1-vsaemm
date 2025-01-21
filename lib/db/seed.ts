@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import clientPromise from '../mongodb';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
@@ -59,14 +59,12 @@ async function seed() {
     // Load and insert actual business data from locations.csv
     const locations = loadLocations();
     
-    // Clear existing data
-    const { error: deleteError } = await supabase
-      .from('vendors')
-      .delete()
-      .neq('id', '0');
-
-    if (deleteError) throw deleteError;
+    const client = await clientPromise;
+    const db = client.db();
     
+    // Clear existing data
+    await db.collection('vendors').deleteMany({});
+
     for (const location of locations) {
       const formattedLocation = formatLocation(location.city, location.state_id);
       
@@ -82,31 +80,17 @@ async function seed() {
         created_at: new Date().toISOString()
       };
 
-      const { error: insertError } = await supabase
-        .from('vendors')
-        .insert(vendor);
-
-      if (insertError) {
-        console.error('Error inserting vendor:', insertError);
-        throw insertError;
-      }
+      await db.collection('vendors').insertOne(vendor);
 
       // Add a sample review
-      const { error: reviewError } = await supabase
-        .from('reviews')
-        .insert({
-          id: uuidv4(),
-          vendor_id: vendor.id,
-          rating: 5,
-          comment: 'Excellent service!',
-          user_name: 'John Doe',
-          created_at: new Date().toISOString()
-        });
-
-      if (reviewError) {
-        console.error('Error inserting review:', reviewError);
-        throw reviewError;
-      }
+      await db.collection('reviews').insertOne({
+        id: uuidv4(),
+        vendor_id: vendor.id,
+        rating: 5,
+        comment: 'Excellent service!',
+        user_name: 'John Doe',
+        created_at: new Date().toISOString()
+      });
     }
 
     console.log('Seeding complete!');

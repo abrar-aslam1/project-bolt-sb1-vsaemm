@@ -2,8 +2,22 @@ import { readFileSync } from 'fs';
 import { parse } from 'csv-parse/sync';
 import path from 'path';
 import clientPromise from '../mongodb';
-import { Place, CachedSearch } from '../models/place';
+import { Place, CachedSearch, initializeCollections } from '../db/schema';
 import { locationCoordinates } from '../locations';
+
+let collections: Awaited<ReturnType<typeof initializeCollections>>;
+
+// Initialize collections on first use
+async function getCollections() {
+  if (!collections) {
+    console.log('Initializing MongoDB collections...');
+    const client = await clientPromise;
+    console.log('Connected to MongoDB');
+    collections = await initializeCollections(client);
+    console.log('Collections initialized:', Object.keys(collections));
+  }
+  return collections;
+}
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
@@ -158,49 +172,43 @@ export class PlacesService {
 
   private static async getCachedResults(category: string, city: string, state: string): Promise<CachedSearch | null> {
     try {
-      const client = await clientPromise;
-      const db = client.db('wedding_directory');
-      const collection = db.collection('cached_searches');
-
-      const result = await collection.findOne({
+      const { cachedSearches } = await getCollections();
+      
+      const result = await cachedSearches.findOne({
         category: this.normalizeCategory(category),
         city: this.normalizeString(city),
-        state: state.toLowerCase(),
-        lastUpdated: { $gt: new Date(Date.now() - CACHE_DURATION) }
+        state: state.toLowerCase()
       });
 
-      if (result) {
-        // Remove MongoDB-specific fields
-        const { _id, ...rest } = result;
-        return rest as CachedSearch;
+      if (result && result.lastUpdated > new Date(Date.now() - CACHE_DURATION)) {
+        return result;
       }
+      return null;
     } catch (error) {
       console.error('Failed to get cached results:', error);
-      // Return null to proceed with fresh search
+      return null;
     }
-
-    return null;
   }
 
   private static async cacheResults(places: Place[], category: string, city: string, state: string) {
     try {
-      const client = await clientPromise;
-      const db = client.db('wedding_directory');
-      const collection = db.collection('cached_searches');
-      const placesCollection = db.collection('places');
-
+      const { cachedSearches, places: placesCollection } = await getCollections();
+      
       // Insert individual places
       if (places.length > 0) {
-        await placesCollection.insertMany(
-          places.map(place => ({ ...place, cached: new Date() })),
-          { ordered: false }
-        ).catch(err => {
-          console.log('Some places already exist in the database');
-        });
+        await placesCollection.bulkWrite(
+          places.map(place => ({
+            updateOne: {
+              filter: { placeId: place.placeId },
+              update: { $set: { ...place, cached: new Date() } },
+              upsert: true
+            }
+          }))
+        );
       }
 
       // Cache the search results
-      await collection.updateOne(
+      await cachedSearches.updateOne(
         {
           category: this.normalizeCategory(category),
           city: this.normalizeString(city),
@@ -218,7 +226,6 @@ export class PlacesService {
       );
     } catch (error) {
       console.error('Failed to cache results:', error);
-      // Continue without caching
     }
   }
 
@@ -253,11 +260,7 @@ export class PlacesService {
       const cachedResults = await this.getCachedResults(category, city, state);
       if (cachedResults) {
         console.log('Returning cached results');
-        return cachedResults.results.map(place => {
-          // Remove MongoDB-specific fields
-          const { _id, ...rest } = place as any;
-          return rest;
-        });
+        return cachedResults.results;
       }
     } catch (error) {
       console.error('Cache lookup failed:', error);

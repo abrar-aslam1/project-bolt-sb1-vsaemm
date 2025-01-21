@@ -1,41 +1,46 @@
-import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { MongoClient } from 'mongodb';
 
-export const vendors = sqliteTable("vendors", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  category: text("category").notNull(),
-  description: text("description"),
-  location: text("location").notNull(),
-  phone: text("phone"),
-  email: text("email"),
-  website: text("website"),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+// MongoDB Schema Definitions
+export interface Place {
+  placeId: string;
+  name: string;
+  address: string;
+  rating?: number;
+  totalRatings?: number;
+  priceLevel?: string;
+  website?: string;
+  location: {
+    type: 'Point';
+    coordinates: [number, number];
+  };
+  cached?: Date;
+}
 
-export const reviews = sqliteTable("reviews", {
-  id: text("id").primaryKey(),
-  vendorId: text("vendor_id")
-    .notNull()
-    .references(() => vendors.id),
-  rating: integer("rating").notNull(),
-  comment: text("comment"),
-  userName: text("user_name").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export interface CachedSearch {
+  category: string;
+  city: string;
+  state: string;
+  query: string;
+  results: Place[];
+  lastUpdated: Date;
+  totalResults: number;
+}
 
-export const images = sqliteTable("images", {
-  id: text("id").primaryKey(),
-  vendorId: text("vendor_id")
-    .notNull()
-    .references(() => vendors.id),
-  url: text("url").notNull(),
-  alt: text("alt"),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+// Initialize MongoDB Collections
+export async function initializeCollections(client: MongoClient) {
+  const db = client.db('wedding_directory');
+  
+  // Create places collection with geospatial index
+  await db.collection('places').createIndex({ location: '2dsphere' });
+  
+  // Create cached_searches collection with TTL index
+  await db.collection('cached_searches').createIndex(
+    { lastUpdated: 1 },
+    { expireAfterSeconds: 30 * 24 * 60 * 60 } // 30 days
+  );
+  
+  return {
+    places: db.collection<Place>('places'),
+    cachedSearches: db.collection<CachedSearch>('cached_searches')
+  };
+}

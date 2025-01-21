@@ -2,6 +2,11 @@
   "name": "nextjs",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -80,5 +85,8 @@
     "uuid": "^9.0.1",
     "vaul": "^0.9.9",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2"
   }
 }

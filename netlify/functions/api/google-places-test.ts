@@ -1,6 +1,6 @@
-import { Handler, HandlerEvent, HandlerContext } from '@netlify/functions';
+import { Handler } from '@netlify/functions';
 
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+const handler: Handler = async (event, context) => {
   try {
     const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
     
@@ -14,16 +14,10 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
             nodeEnv: process.env.NODE_ENV,
             hasGoogleKey: !!process.env.GOOGLE_API_KEY,
           }
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
+        })
       };
     }
 
-    // Test the Google Places API with a simple query
     const url = `https://places.googleapis.com/v1/places:searchText`;
     const response = await fetch(url, {
       method: 'POST',
@@ -59,12 +53,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
           statusText: response.statusText,
           details: errorText,
           headers: Object.fromEntries(response.headers.entries())
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        },
+        })
       };
     }
 
@@ -78,12 +67,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
         apiKeyLength: GOOGLE_API_KEY.length,
         apiKeyPrefix: GOOGLE_API_KEY.substring(0, 8) + '...',
         response: data
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
+      })
     };
   } catch (error) {
     console.error('Test API Error:', error);
@@ -92,12 +76,9 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       body: JSON.stringify({
         error: error instanceof Error ? error.message : 'An unknown error occurred',
         stack: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.stack : undefined : undefined
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
+      })
     };
   }
 };
+
+export { handler };
