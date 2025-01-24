@@ -19,7 +19,6 @@ async function getCollections() {
   return collections;
 }
 
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 
 interface Location {
@@ -80,92 +79,31 @@ export class PlacesService {
     return category.charAt(0).toUpperCase() + category.slice(1);
   }
 
-  private static async searchGooglePlaces(query: string, city: string, state: string): Promise<Place[]> {
-    if (!GOOGLE_API_KEY) {
-      console.error('GOOGLE_API_KEY is not set');
-      throw new Error('Google Places API key is not configured');
-    }
-
-    const url = `https://places.googleapis.com/v1/places:searchText`;
-    
-    // Get coordinates for the city
-    const cityKey = this.normalizeString(`${city}`);
-    const coordinates = locationCoordinates[cityKey];
-    
-    if (!coordinates) {
-      console.error('No coordinates found for city:', city);
-      throw new Error(`Location coordinates not found for ${city}`);
-    }
-
-    const [lat, lng, radius] = coordinates.split(',').map(Number);
-    
-    // Format the query to be more specific for wedding services
-    const formattedQuery = `${query} in ${city}, ${state}`;
-    console.log('Google Places API Query:', formattedQuery);
-    console.log('Using coordinates:', { lat, lng, radius });
-
+  public static async searchPlacesAPI(category: string, city: string, state: string): Promise<Place[]> {
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': GOOGLE_API_KEY,
-          'X-Goog-FieldMask': [
-            'places.id',
-            'places.displayName',
-            'places.formattedAddress',
-            'places.rating',
-            'places.userRatingCount',
-            'places.priceLevel',
-            'places.websiteUri',
-            'places.location'
-          ].join(',')
-        },
-        body: JSON.stringify({
-          textQuery: formattedQuery,
-          locationBias: {
-            circle: {
-              center: {
-                latitude: lat,
-                longitude: lng
-              },
-              radius: radius * 1000 // Convert to meters
-            }
-          },
-          maxResultCount: 20,
-          languageCode: "en"
-        })
-      });
-
+      const response = await fetch(`http://127.0.0.1:3001/top/${category}/${city}/${state}`);
+      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Google Places API Error Response:', errorText);
-        throw new Error(`Google Places API error: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch places: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Google Places API Response:', JSON.stringify(data, null, 2));
-
-      if (!data.places || !Array.isArray(data.places)) {
-        console.error('No places found in response');
-        return [];
-      }
-
-      return data.places.map((place: any) => ({
+      
+      return data.map((place: any) => ({
         placeId: place.id,
-        name: place.displayName.text,
-        address: place.formattedAddress,
+        name: place.name,
+        address: place.address,
         rating: place.rating,
-        totalRatings: place.userRatingCount,
-        priceLevel: place.priceLevel,
-        website: place.websiteUri,
+        totalRatings: place.review_count,
+        priceLevel: place.price_level,
+        website: place.website,
         location: {
-          type: 'Point',
-          coordinates: [place.location.longitude, place.location.latitude]
+          lat: place.geometry.location.lat,
+          lng: place.geometry.location.lng
         }
       }));
     } catch (error) {
-      console.error('Error in searchGooglePlaces:', error);
+      console.error('Error fetching places:', error);
       throw error;
     }
   }
@@ -267,9 +205,9 @@ export class PlacesService {
       // Continue with fresh search
     }
 
-    // If not in cache or cache failed, fetch from Google Places API
-    console.log('Fetching from Google Places API for:', mappedCategory);
-    const places = await this.searchGooglePlaces(
+    // If not in cache or cache failed, fetch from API
+    console.log('Fetching from API for:', mappedCategory);
+    const places = await this.searchPlacesAPI(
       mappedCategory,
       city,
       state

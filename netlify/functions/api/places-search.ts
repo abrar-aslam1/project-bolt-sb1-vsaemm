@@ -3,52 +3,51 @@ import { db } from '../../../lib/db';
 import { Place } from '../../../lib/db/schema';
 import path from 'path';
 
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
-if (!GOOGLE_API_KEY) {
-  throw new Error('GOOGLE_API_KEY environment variable is required');
+const DATAFORSEO_API_KEY = process.env.DATAFORSEO_API_KEY;
+if (!DATAFORSEO_API_KEY) {
+  throw new Error('DATAFORSEO_API_KEY environment variable is required');
 }
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-
-// Location coordinates for Google Places API
-const locationCoordinates: Record<string, string> = {
-  // ... (same location coordinates as before)
-};
 
 function normalizeString(str: string): string {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').trim();
 }
 
-async function searchGooglePlaces(query: string, city: string, state: string): Promise<Place[]> {
-  const location = locationCoordinates[`${city},${state}`];
-  if (!location) {
-    throw new Error(`Location not found for ${city}, ${state}`);
+async function searchDataForSEO(query: string, city: string, state: string): Promise<Place[]> {
+  const url = 'https://api.dataforseo.com/v3/business_data/business_listings/search/live';
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Basic ${Buffer.from(`${DATAFORSEO_API_KEY}:`).toString('base64')}`
+    },
+    body: JSON.stringify([{
+      keyword: `${query} in ${city}, ${state}`,
+      location_name: `${city}, ${state}`,
+      language_code: 'en',
+      limit: 20
+    }])
+  });
+
+  if (!response.ok) {
+    throw new Error(`DataForSEO API error: ${response.status}`);
   }
 
-  const url = new URL('https://maps.googleapis.com/maps/api/place/textsearch/json');
-  url.searchParams.set('query', `${query} in ${city}, ${state}`);
-  url.searchParams.set('key', GOOGLE_API_KEY as string);
-  url.searchParams.set('location', location);
-  url.searchParams.set('radius', '5000');
-  url.searchParams.set('type', 'establishment');
-
-  const response = await fetch(url.toString());
   const data = await response.json();
+  const results = data.tasks?.[0]?.result?.[0]?.items || [];
 
-  if (data.status !== 'OK') {
-    throw new Error(`Google Places API error: ${data.status}`);
-  }
-
-  return data.results.map((result: any) => ({
-    placeId: result.place_id,
+  return results.map((result: any) => ({
+    placeId: result.business_id,
     name: result.name,
-    address: result.formatted_address,
+    address: result.address,
     rating: result.rating,
-    totalRatings: result.user_ratings_total,
+    totalRatings: result.reviews_count,
     priceLevel: result.price_level,
     website: result.website,
     location: {
       type: 'Point',
-      coordinates: [result.geometry.location.lng, result.geometry.location.lat]
+      coordinates: [result.longitude, result.latitude]
     },
     cached: new Date()
   }));
@@ -144,8 +143,8 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       };
     }
 
-    // Fetch new results from Google Places API
-    const places = await searchGooglePlaces(query, city, state);
+    // Fetch new results from DataForSEO API
+    const places = await searchDataForSEO(query, city, state);
     
     // Cache the new results
     await cacheResults(places, query, city, state);

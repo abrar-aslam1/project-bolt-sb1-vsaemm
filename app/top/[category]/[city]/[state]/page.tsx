@@ -4,9 +4,11 @@ import { Place } from '@/lib/services/places-client';
 
 async function getPlaces(category: string, city: string, state: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:8888' 
+      : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-    const response = await fetch(`${baseUrl}/api/places/top`, {
+    const response = await fetch(`${baseUrl}/api/api/places-top`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

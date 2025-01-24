@@ -1,22 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { PlacesService } from '@/lib/services/places-service';
 
-export const dynamic = 'force-dynamic';
-
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { category, city, state } = body;
-
+    const { category, city, state } = await request.json();
+    
     if (!category || !city || !state) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required parameters' },
         { status: 400 }
       );
     }
 
-    const places = await PlacesService.searchPlaces(category, city, state);
-    return NextResponse.json({ results: places });
+    // Get mock data directly from the service
+    const places = await PlacesService.searchPlacesAPI(category, city, state);
+    
+    return NextResponse.json({
+      results: places
+    });
+    
   } catch (error) {
     console.error('Error in places API:', error);
     return NextResponse.json(
