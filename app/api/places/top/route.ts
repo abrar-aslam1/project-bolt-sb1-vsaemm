@@ -1,95 +1,44 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import axios from 'axios';
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const category = searchParams.get('category');
-  const city = searchParams.get('city'); 
-  const state = searchParams.get('state');
-
-  if (!category || !city || !state) {
-    return NextResponse.json(
-      { error: 'Missing required query parameters' },
-      { status: 400 }
-    );
-  }
-
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8888/.netlify/functions/api';
-
+export async function POST(request: Request) {
   try {
-    const response = await fetch(`${baseUrl}/places-top`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        category,
-        city,
-        state
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Netlify function error:', errorText);
+    const { category, city, state } = await request.json();
+    
+    if (!process.env.DATAFORSEO_LOGIN || !process.env.DATAFORSEO_PASSWORD) {
       return NextResponse.json(
-        { error: `Failed to fetch places: ${response.status}` },
-        { status: response.status }
+        { error: 'Missing DataForSEO credentials' },
+        { status: 500 }
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('API route error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+    const credentials = Buffer.from(
+      `${process.env.DATAFORSEO_LOGIN}:${process.env.DATAFORSEO_PASSWORD}`
+    ).toString('base64');
+
+    const response = await axios.post(
+      'https://api.dataforseo.com/v3/serp/google/maps/task_get/advanced',
+      {
+        keyword: `${category} in ${city}, ${state}`,
+        location_code: 2840,
+        language_code: "en",
+        device: "desktop",
+        depth: 10
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${credentials}`
+        }
+      }
     );
-  }
-}
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { category, city, state } = body;
-
-    if (!category || !city || !state) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8888';
-
-    // Forward the request to the Netlify function
-    const response = await fetch(`${baseUrl}/.netlify/functions/api/places-top`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        category,
-        city,
-        state
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Netlify function error:', errorText);
-      return NextResponse.json(
-        { error: `Failed to fetch places: ${response.status}` },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(response.data);
+    
   } catch (error) {
-    console.error('API route error:', error);
+    console.error('API Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch places data' },
       { status: 500 }
     );
   }

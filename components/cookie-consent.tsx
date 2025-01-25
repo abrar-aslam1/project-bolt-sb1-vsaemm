@@ -6,15 +6,30 @@ export function CookieConsent() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const consent = localStorage.getItem('cookie-consent');
-    if (!consent) {
-      setIsVisible(true);
+    try {
+      // Check if localStorage is available
+      const test = 'test';
+      localStorage.setItem(test, test);
+      localStorage.removeItem(test);
+      
+      const consent = localStorage.getItem('cookie-consent');
+      if (!consent) {
+        setIsVisible(true);
+      }
+    } catch (error) {
+      console.error('LocalStorage access error:', error);
+      setIsVisible(false);
     }
   }, []);
 
   const acceptCookies = () => {
-    localStorage.setItem('cookie-consent', 'accepted');
-    setIsVisible(false);
+    try {
+      localStorage.setItem('cookie-consent', 'accepted');
+      setIsVisible(false);
+    } catch (error) {
+      console.error('Failed to set cookie consent:', error);
+      setIsVisible(false);
+    }
   };
 
   if (!isVisible) return null;

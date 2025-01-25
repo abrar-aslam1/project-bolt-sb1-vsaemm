@@ -81,25 +81,60 @@ export class PlacesService {
 
   public static async searchPlacesAPI(category: string, city: string, state: string): Promise<Place[]> {
     try {
-      const response = await fetch(`http://127.0.0.1:3001/top/${category}/${city}/${state}`);
+      // Get coordinates from location mapping
+      const locationKey = `${city.toLowerCase()}-${state.toLowerCase()}`;
+      const coordinates = locationCoordinates[locationKey];
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch places: ${response.status}`);
+      if (!coordinates) {
+        throw new Error(`No coordinates found for ${city}, ${state}`);
       }
 
-      const data = await response.json();
+      // Create Basic Auth header
+      if (!process.env.DATAFORSEO_API_LOGIN || !process.env.DATAFORSEO_API_PASSWORD) {
+        throw new Error('Missing DataForSEO API credentials - check environment variables');
+      }
+      const authString = Buffer.from(
+        `${process.env.DATAFORSEO_API_LOGIN}:${process.env.DATAFORSEO_API_PASSWORD}`
+      ).toString('base64');
+
+      // Create properly formatted request body
+      const post_array = [{
+        keyword: `Wedding ${category} in ${city}, ${state}`,
+        location_code: 2840,
+        language_code: 'en',
+        device: "desktop",
+        os: "windows",
+        depth: 10
+      }];
+
+      const response = await fetch('https://api.dataforseo.com/v3/serp/google/maps/task_post', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${authString}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(post_array, null, 2)
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`API request failed: ${response.status} - ${errorBody}`);
+      }
+
+      const { tasks } = await response.json();
+      const result = tasks[0].result[0];
       
-      return data.map((place: any) => ({
-        placeId: place.id,
-        name: place.name,
+      return result.items.map((place: any) => ({
+        placeId: place.place_id,
+        name: place.title,
         address: place.address,
         rating: place.rating,
-        totalRatings: place.review_count,
+        totalRatings: place.reviews_count,
         priceLevel: place.price_level,
         website: place.website,
         location: {
-          lat: place.geometry.location.lat,
-          lng: place.geometry.location.lng
+          lat: place.gps_coordinates.latitude,
+          lng: place.gps_coordinates.longitude
         }
       }));
     } catch (error) {

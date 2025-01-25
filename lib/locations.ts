@@ -19,75 +19,77 @@ export const citiesByState: Record<string, string[]> = {
 
 // Location coordinates for Google Places API
 // Format: "latitude,longitude,radius"
-export const locationCoordinates: Record<string, string> = {
+export const locationCoordinates: Record<string, {lat: number, lng: number}> = {
+  // Example coordinates - should match actual supported locations
+  'new-york': { lat: 40.7128, lng: -74.0060 },
+  'los-angeles': { lat: 34.0522, lng: -118.2437 },
+  'chicago': { lat: 41.8781, lng: -87.6298 },
+  
   // Arizona
-  'phoenix': '33.4484,-112.0740,10',
-  'tucson': '32.2226,-110.9747,10',
-  'scottsdale': '33.4942,-111.9261,10',
+  'phoenix': { lat: 33.4484, lng: -112.0740 },
+  'tucson': { lat: 32.2226, lng: -110.9747 },
+  'scottsdale': { lat: 33.4942, lng: -111.9261 },
   
   // California
-  'los-angeles': '34.1139,-118.4068,10',
-  'san-francisco': '37.7749,-122.4194,10',
-  'san-diego': '32.7157,-117.1611,10',
-  'sacramento': '38.5816,-121.4944,10',
-  'san-jose': '37.3382,-121.8863,10',
+  'san-francisco': { lat: 37.7749, lng: -122.4194 },
+  'san-diego': { lat: 32.7157, lng: -117.1611 },
+  'sacramento': { lat: 38.5816, lng: -121.4944 },
+  'san-jose': { lat: 37.3382, lng: -121.8863 },
   
   // Colorado
-  'denver': '39.7392,-104.9903,10',
+  'denver': { lat: 39.7392, lng: -104.9903 },
   
   // Florida
-  'miami': '25.7617,-80.1918,10',
-  'orlando': '28.5383,-81.3792,10',
-  'tampa': '27.9506,-82.4572,10',
-  'jacksonville': '30.3322,-81.6557,10',
+  'miami': { lat: 25.7617, lng: -80.1918 },
+  'orlando': { lat: 28.5383, lng: -81.3792 },
+  'tampa': { lat: 27.9506, lng: -82.4572 },
+  'jacksonville': { lat: 30.3322, lng: -81.6557 },
   
   // Georgia
-  'atlanta': '33.7490,-84.3880,10',
-  'savannah': '32.0809,-81.0912,10',
-  'augusta': '33.4735,-81.9748,10',
+  'atlanta': { lat: 33.7490, lng: -84.3880 },
+  'savannah': { lat: 32.0809, lng: -81.0912 },
+  'augusta': { lat: 33.4735, lng: -81.9748 },
   
   // Illinois
-  'chicago': '41.8781,-87.6298,10',
-  'springfield': '39.7817,-89.6501,10',
-  'rockford': '42.2711,-89.0937,10',
+  'springfield': { lat: 39.7817, lng: -89.6501 },
+  'rockford': { lat: 42.2711, lng: -89.0937 },
   
   // Massachusetts
-  'boston': '42.3601,-71.0589,10',
-  'worcester': '42.2626,-71.8023,10',
-  'cambridge': '42.3736,-71.1097,10',
+  'boston': { lat: 42.3601, lng: -71.0589 },
+  'worcester': { lat: 42.2626, lng: -71.8023 },
+  'cambridge': { lat: 42.3736, lng: -71.1097 },
   
   // Nevada
-  'las-vegas': '36.1699,-115.1398,10',
+  'las-vegas': { lat: 36.1699, lng: -115.1398 },
   
   // New York
-  'new-york': '40.7128,-74.0060,10',
-  'buffalo': '42.8864,-78.8784,10',
-  'rochester': '43.1566,-77.6088,10',
-  'albany': '42.6526,-73.7562,10',
+  'buffalo': { lat: 42.8864, lng: -78.8784 },
+  'rochester': { lat: 43.1566, lng: -77.6088 },
+  'albany': { lat: 42.6526, lng: -73.7562 },
   
   // Oregon
-  'portland': '45.5155,-122.6789,10',
+  'portland': { lat: 45.5155, lng: -122.6789 },
   
   // Pennsylvania
-  'philadelphia': '39.9526,-75.1652,10',
-  'pittsburgh': '40.4406,-79.9959,10',
-  'harrisburg': '40.2732,-76.8867,10',
+  'philadelphia': { lat: 39.9526, lng: -75.1652 },
+  'pittsburgh': { lat: 40.4406, lng: -79.9959 },
+  'harrisburg': { lat: 40.2732, lng: -76.8867 },
   
   // Texas
-  'houston': '29.7604,-95.3698,10',
-  'dallas': '32.7767,-96.7970,10',
-  'austin': '30.2672,-97.7431,10',
-  'san-antonio': '29.4241,-98.4936,10',
-  'fort-worth': '32.7555,-97.3308,10',
+  'houston': { lat: 29.7604, lng: -95.3698 },
+  'dallas': { lat: 32.7767, lng: -96.7970 },
+  'austin': { lat: 30.2672, lng: -97.7431 },
+  'san-antonio': { lat: 29.4241, lng: -98.4936 },
+  'fort-worth': { lat: 32.7555, lng: -97.3308 },
   
   // Washington
-  'seattle': '47.6062,-122.3321,10',
-  'spokane': '47.6587,-117.4260,10',
-  'tacoma': '47.2529,-122.4443,10',
+  'seattle': { lat: 47.6062, lng: -122.3321 },
+  'spokane': { lat: 47.6587, lng: -117.4260 },
+  'tacoma': { lat: 47.2529, lng: -122.4443 },
   
   // Tennessee
-  'nashville': '36.1627,-86.7816,10',
+  'nashville': { lat: 36.1627, lng: -86.7816 },
   
   // Louisiana
-  'new-orleans': '29.9511,-90.0715,10'
+  'new-orleans': { lat: 29.9511, lng: -90.0715 }
 };
